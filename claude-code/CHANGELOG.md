@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1
+
+- Fix the terminal failing to start with `iface hassio ... DOESN'T EXIST`. ttyd
+  was told to bind an interface named `hassio`, which only exists for add-ons
+  running with `host_network`. This add-on is an ordinary member of the
+  Supervisor bridge, so it now binds normally and is reached through Ingress.
+
 ## 0.1.0
 
 First release.

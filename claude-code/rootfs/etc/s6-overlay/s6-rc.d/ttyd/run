@@ -16,24 +16,24 @@ else
 fi
 
 if [[ "${TTYD_BIND_ALL:-0}" == "1" ]]; then
-    # Test mode: a plain Docker host has neither the Supervisor API to ask for a
-    # port nor a "hassio" interface to bind to. Never reached inside Home
-    # Assistant, where the add-on has both.
+    # Test mode: a plain Docker host has no Supervisor API to ask for a port.
+    # Never reached inside Home Assistant.
     ingress_port="${INGRESS_PORT:-7681}"
-    bashio::log.warning \
-        "TTYD_BIND_ALL is set: listening on all interfaces, port ${ingress_port}."
+    bashio::log.warning "Test mode: using port ${ingress_port}."
 else
     # Home Assistant assigns the Ingress port dynamically. Ingress terminates
     # the authentication and proxies the stream, so ttyd needs no base path.
     ingress_port=$(bashio::app.ingress_port)
     bashio::var.has_value "${ingress_port}" \
         || bashio::exit.nok 'Could not determine the Ingress port'
-
-    # Listen on the Supervisor interface only, so the terminal is reachable
-    # through Ingress and nowhere else.
-    options+=(-i hassio)
 fi
 
+# No -i: this container is attached to the Supervisor's bridge as an ordinary
+# member, where its interface is eth0 and no interface named "hassio" exists --
+# that name only resolves for add-ons running with host_network, which this one
+# deliberately does not. Binding every interface is what other Ingress add-ons
+# do as well; the add-on publishes no port, so the only route in from outside
+# the bridge is Ingress, with Home Assistant's authentication in front of it.
 options+=(-p "${ingress_port}")
 options+=(--writable)
 
