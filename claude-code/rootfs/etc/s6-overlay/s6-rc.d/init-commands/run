@@ -1,0 +1,26 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant Add-on: Claude Code
+# Executes user configured commands on startup
+# ==============================================================================
+declare length
+declare cmd
+
+bashio::config.has_value 'init_commands' || exit 0
+
+length=$(bashio::config 'init_commands | length') \
+    || bashio::exit.nok 'Failed to read the init_commands list'
+
+for (( i=0; i<length; i++ )); do
+    cmd=$(bashio::config "init_commands[${i}]") \
+        || bashio::exit.nok "Failed to read init command at index ${i}"
+
+    bashio::log.info "Running init command: ${cmd}"
+
+    # A failing init command is logged but does not stop the add-on. Locking
+    # yourself out of the terminal over a typo in an init command would leave no
+    # way to fix the init command.
+    eval "${cmd}" \
+        || bashio::log.warning "Init command failed: ${cmd}"
+done

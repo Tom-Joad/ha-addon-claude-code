@@ -1,0 +1,144 @@
+# Home Assistant Add-on: Claude Code
+
+Claude Code in your browser, for maintaining a Home Assistant installation.
+
+This is a terminal, not an IDE. It exists to let Claude work on the thing it is
+attached to — configuration, automations, dashboards, the entity registry — and
+nothing else is bundled in.
+
+## Installation
+
+1. Add this repository to the Home Assistant add-on store.
+2. Install the **Claude Code** add-on.
+3. Start it, open the **Claude** panel in the sidebar, and run `/login` once to
+   sign in with your Claude account.
+
+The login is stored in `/data`, so it survives restarts and updates. You only do
+it again if you remove the add-on or restore onto a fresh machine.
+
+## What it does with your configuration
+
+The add-on mounts the Home Assistant configuration directory at `/config` and
+starts Claude there. Two consequences worth knowing:
+
+- A `CLAUDE.md` in that directory is picked up automatically at the start of
+  every session. That is the place for instructions specific to your house:
+  which entities are off limits, which conventions you use, what Claude should
+  ask about rather than decide.
+- The add-on ships its own instructions as well, covering the things that hold
+  for any Home Assistant installation — never restart Core unprompted, never
+  write into `.storage` directly, verify a change after making it. Your file is
+  read after the add-on's, so where the two disagree, yours wins.
+
+The add-on also gets the Supervisor and Home Assistant APIs, which is what makes
+`ha core check`, Core logs, and the WebSocket API reachable from the session.
+
+## Configuration
+
+```yaml
+log_level: info
+cleanup_period_days: 14
+claude_version: latest
+remote_control: server
+remote_control_name: Home Assistant
+import_existing_state: false
+packages: []
+init_commands: []
+```
+
+### Option: `cleanup_period_days`
+
+How long session transcripts are kept. They accumulate at roughly 800 KB per
+hour of session. On an SD card or eMMC that write load is worth limiting, which
+is why the default here is lower than Claude Code's own default of 30 days.
+
+### Option: `claude_version`
+
+`latest`, `stable`, or an exact version such as `2.1.226`.
+
+The Claude Code binary is around 300 MB and is deliberately **not** part of the
+add-on image. It is downloaded into `/data` on first start and only replaced
+when the version actually changes. The image stays small, updates need no
+rebuild, and an add-on update does not rewrite 300 MB to the disk.
+
+If the download fails while a working binary is already present — a slow or
+failed-over uplink, for instance — the add-on logs a warning and starts with the
+version it has, rather than refusing to come up.
+
+### Option: `remote_control`
+
+Continue a session from your phone, tablet, or another browser through
+[claude.ai/code](https://claude.ai/code) or the Claude mobile app. All traffic is
+outbound HTTPS; nothing listens for incoming connections.
+
+| Value | Behaviour |
+| --- | --- |
+| `server` | A dedicated service keeps a session available at all times, whether or not a browser terminal is open. Supports several concurrent sessions. |
+| `session` | No extra service. The terminal session connects itself, so the browser terminal, the web, and your phone all show the same session. |
+| `disabled` | The feature is off, and `DISABLE_TELEMETRY`, `DO_NOT_TRACK`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` and `DISABLE_GROWTHBOOK` are set. |
+
+The three values are one setting rather than several because Remote Control and
+those environment variables are mutually exclusive: each of them disables the
+feature-flag lookup that Remote Control availability depends on, and setting
+both leaves you with a feature that reports itself as unavailable for no visible
+reason.
+
+Requirements: a Claude Pro or Max subscription, signed in with `/login`. API keys
+and long-lived tokens from `claude setup-token` cannot establish a Remote Control
+session. Run `claude doctor` if something does not connect.
+
+In `server` mode the service waits until you have signed in and starts on its
+own afterwards. If the machine loses network for more than about ten minutes the
+remote session times out and the process exits; the add-on restarts it, so the
+connection comes back by itself.
+
+### Option: `import_existing_state`
+
+For migrating from a setup that ran Claude Code elsewhere — for example as a
+VS Code extension inside another add-on — with state under
+`<config>/.claude`.
+
+Set it to `true` and restart once. Curated memory, transcripts, the settings
+file and an existing memory baseline are copied into the add-on's own storage.
+Nothing already present is overwritten, and the source directory is not
+modified. A marker file makes sure the import runs only once; you can set the
+option back to `false` afterwards.
+
+### Option: `packages` / `init_commands`
+
+Extra Alpine packages and shell commands to run at startup. Failures in either
+are logged but do not stop the add-on: a typo in an init command should not cost
+you the terminal you would fix it from.
+
+## Where state is kept
+
+Everything Claude Code owns lives on the add-on's persistent volume:
+
+| Path | Contents |
+| --- | --- |
+| `/data/claude` | `CLAUDE_CONFIG_DIR` — credentials, global config, settings |
+| `/data/claude/memory` | Curated memory, kept apart from the transcripts |
+| `/data/claude/projects` | Session transcripts |
+| `/data/home` | `HOME`, including the installed binary under `.local` |
+
+Curated memory is separated from transcripts on purpose: one is maintained, the
+other is a recording you can throw away. The `autoMemoryDirectory` setting is
+what puts it there.
+
+Note that add-on backups include `/data`, and therefore include your credentials
+and your transcripts. If that is not what you want, exclude them.
+
+## Session handling
+
+The terminal runs inside tmux. Closing the browser tab, reloading the page, or
+losing your connection does not interrupt what Claude is doing — reopening the
+panel reattaches to the same session. This matters for anything long-running,
+where the alternative is losing the work to an accidental refresh.
+
+If Claude exits, the pane drops to a shell in `/config` rather than dying, so
+you can start it again without restarting the add-on.
+
+## Support
+
+Open an issue at
+<https://github.com/Tom-Joad/ha-addon-claude-code/issues>.

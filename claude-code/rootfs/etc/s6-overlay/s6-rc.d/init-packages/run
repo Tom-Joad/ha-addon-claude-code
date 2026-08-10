@@ -1,0 +1,25 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant Add-on: Claude Code
+# Installs user configured packages
+# ==============================================================================
+
+bashio::config.has_value 'packages' || exit 0
+
+# Failures here are intentionally non-fatal. If the package indexes or a single
+# package cannot be fetched, the terminal should still come up: it is the only
+# way in to debug why.
+if ! apk update; then
+    bashio::log.warning \
+        'Failed updating the Alpine package indexes, is the network up?'
+    bashio::log.warning \
+        'Skipping the custom packages so the terminal stays available.'
+    exit 0
+fi
+
+for package in $(bashio::config 'packages'); do
+    bashio::log.info "Installing package ${package}..."
+    apk add "${package}" \
+        || bashio::log.warning "Failed installing package ${package}"
+done

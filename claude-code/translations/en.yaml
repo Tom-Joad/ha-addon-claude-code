@@ -1,0 +1,48 @@
+---
+configuration:
+  log_level:
+    name: Log level
+    description: >-
+      Controls how much the add-on writes to its own log. Leave at info unless
+      you are chasing a startup problem.
+  cleanup_period_days:
+    name: Transcript retention (days)
+    description: >-
+      How long Claude Code keeps session transcripts. They grow by roughly
+      800 KB per hour of session, and on an SD card or eMMC that write load
+      adds up, so this defaults lower than Claude Code's own default of 30.
+  claude_version:
+    name: Claude Code version
+    description: >-
+      Which version to install: latest, stable, or an exact version such as
+      2.1.226. The binary lives in /data, so changing this updates or rolls
+      back without rebuilding the add-on.
+  remote_control:
+    name: Remote Control
+    description: >-
+      server keeps a session reachable from claude.ai/code and the Claude
+      mobile app at all times. session instead connects the terminal session
+      itself, so every device shows the same session. disabled turns the
+      feature off and switches off telemetry and non-essential traffic with
+      it. Requires a Claude Pro or Max subscription and a one-time /login.
+  remote_control_name:
+    name: Remote Control session name
+    description: >-
+      The name this machine's session shows up under in the session list.
+  import_existing_state:
+    name: Import existing state
+    description: >-
+      Once, on the next start, copy memory, transcripts and settings from
+      <config>/.claude into the add-on's own storage. Nothing is overwritten
+      and the source is left untouched. Only useful when migrating from a
+      setup that ran Claude Code somewhere else.
+  packages:
+    name: Extra packages
+    description: >-
+      Alpine packages to install at startup, for tooling you want available
+      in the terminal.
+  init_commands:
+    name: Init commands
+    description: >-
+      Shell commands to run at startup, after Claude Code is installed.
+network: {}

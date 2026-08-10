@@ -1,0 +1,32 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant Add-on: Claude Code
+# Runs Claude Code in Remote Control server mode
+# ==============================================================================
+declare -a options
+declare session_name
+
+# Remote Control needs a full claude.ai login. Without it the command exits
+# immediately, so the service would otherwise spin in a tight restart loop.
+if ! bashio::fs.file_exists '/data/claude/.credentials.json'; then
+    bashio::log.warning \
+        'Not signed in yet. Open the terminal and run "/login" once;' \
+        'Remote Control starts on its own afterwards.'
+    sleep 60
+    exit 1
+fi
+
+session_name=$(bashio::config 'remote_control_name' 'Home Assistant')
+
+options+=(--spawn same-dir)
+options+=(--name "${session_name}")
+bashio::debug && options+=(--verbose)
+
+# same-dir rather than worktree: the configuration directory is not a git
+# repository, and every session is meant to share it.
+cd /config || bashio::exit.nok 'Working directory /config is not available'
+
+bashio::log.info "Starting Remote Control as \"${session_name}\"..."
+
+exec claude remote-control "${options[@]}"

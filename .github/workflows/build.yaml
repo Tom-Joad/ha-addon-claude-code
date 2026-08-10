@@ -1,0 +1,130 @@
+---
+name: Build
+
+# yamllint disable-line rule:truthy
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "claude-code/**"
+      - ".github/workflows/build.yaml"
+  pull_request:
+    paths:
+      - "claude-code/**"
+      - ".github/workflows/build.yaml"
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+env:
+  ARCHITECTURES: '["amd64", "aarch64"]'
+  IMAGE_NAME: ha-addon-claude-code
+  # Spelled out rather than derived from github.repository_owner: container
+  # registries reject upper case in an image name, and the owner has it.
+  REGISTRY_PREFIX: ghcr.io/tom-joad
+
+permissions:
+  contents: read
+
+jobs:
+  init:
+    name: Initialize build
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      version: ${{ steps.version.outputs.version }}
+      push: ${{ steps.version.outputs.push }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Determine version
+        id: version
+        run: |
+          config_version=$(yq -r '.version' claude-code/config.yaml)
+
+          if [[ "${{ github.event_name }}" == "release" ]]; then
+            version="${{ github.event.release.tag_name }}"
+            version="${version#v}"
+
+            # The Supervisor pulls image:version straight from config.yaml, so a
+            # release whose tag does not match it publishes an image the add-on
+            # will never ask for.
+            if [[ "${version}" != "${config_version}" ]]; then
+              echo "::error::Release tag ${version} does not match" \
+                   "the version ${config_version} in claude-code/config.yaml"
+              exit 1
+            fi
+            echo "push=true" >> "$GITHUB_OUTPUT"
+          else
+            version="${config_version}"
+            echo "push=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "Building version ${version}"
+
+      - name: Get build matrix
+        id: matrix
+        uses: home-assistant/builder/actions/prepare-multi-arch-matrix@2026.06.0
+        with:
+          architectures: ${{ env.ARCHITECTURES }}
+          image-name: ${{ env.IMAGE_NAME }}
+          registry-prefix: ${{ env.REGISTRY_PREFIX }}
+
+  build:
+    name: Build ${{ matrix.arch }} image
+    needs: init
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.init.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Read the base image for this architecture
+        id: base
+        run: |
+          base=$(yq -r ".build_from.${{ matrix.arch }}" claude-code/build.yaml)
+          echo "image=${base}" >> "$GITHUB_OUTPUT"
+
+      - name: Build image
+        uses: home-assistant/builder/actions/build-image@2026.06.0
+        with:
+          arch: ${{ matrix.arch }}
+          context: claude-code
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
+          image: ${{ matrix.image }}
+          image-tags: |
+            ${{ needs.init.outputs.version }}
+            latest
+          build-args: |
+            BUILD_FROM=${{ steps.base.outputs.image }}
+          push: ${{ needs.init.outputs.push }}
+          version: ${{ needs.init.outputs.version }}
+
+  manifest:
+    name: Publish multi-arch manifest
+    needs: [init, build]
+    if: needs.init.outputs.push == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    steps:
+      - name: Publish multi-arch manifest
+        uses: home-assistant/builder/actions/publish-multi-arch-manifest@2026.06.0
+        with:
+          architectures: ${{ env.ARCHITECTURES }}
+          container-registry-password: ${{ secrets.GITHUB_TOKEN }}
+          image-name: ${{ env.IMAGE_NAME }}
+          registry-prefix: ${{ env.REGISTRY_PREFIX }}
+          image-tags: |
+            ${{ needs.init.outputs.version }}
+            latest

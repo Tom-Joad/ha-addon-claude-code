@@ -1,0 +1,49 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant Add-on: Claude Code
+# Runs the ttyd daemon that serves the terminal through Ingress
+# ==============================================================================
+declare -a options
+declare ingress_port
+
+bashio::log.info 'Starting the ttyd daemon...'
+
+if bashio::debug; then
+    options+=(-d7)
+else
+    options+=(-d1)
+fi
+
+if [[ "${TTYD_BIND_ALL:-0}" == "1" ]]; then
+    # Test mode: a plain Docker host has neither the Supervisor API to ask for a
+    # port nor a "hassio" interface to bind to. Never reached inside Home
+    # Assistant, where the add-on has both.
+    ingress_port="${INGRESS_PORT:-7681}"
+    bashio::log.warning \
+        "TTYD_BIND_ALL is set: listening on all interfaces, port ${ingress_port}."
+else
+    # Home Assistant assigns the Ingress port dynamically. Ingress terminates
+    # the authentication and proxies the stream, so ttyd needs no base path.
+    ingress_port=$(bashio::app.ingress_port)
+    bashio::var.has_value "${ingress_port}" \
+        || bashio::exit.nok 'Could not determine the Ingress port'
+
+    # Listen on the Supervisor interface only, so the terminal is reachable
+    # through Ingress and nowhere else.
+    options+=(-i hassio)
+fi
+
+options+=(-p "${ingress_port}")
+options+=(--writable)
+
+# Working directory matters twice over: it is what makes Claude Code pick up
+# /config/CLAUDE.md automatically, and it is what keeps the project key equal to
+# the one an existing transcript directory was created under.
+cd /config || bashio::exit.nok 'Working directory /config is not available'
+
+export TTYD=1
+
+# tmux is not optional. Without it every browser reload kills the running
+# session; with it the browser attaches to a session that keeps going.
+exec ttyd "${options[@]}" tmux -u new -A -s claude /usr/bin/claude-session

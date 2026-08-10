@@ -1,0 +1,26 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant Add-on: Claude Code
+# Restarts Remote Control instead of taking the container down
+# ==============================================================================
+readonly exit_code_service="${1}"
+readonly exit_code_signal="${2}"
+
+# Deliberately different from the ttyd service, which halts the container when
+# it dies. A Remote Control session ends on its own after roughly ten minutes
+# without network, which is a normal event on a link that can fail over rather
+# than a reason to take the add-on down. Letting s6 restart the service is what
+# makes the connection heal by itself.
+#
+# The delay throttles the restart loop while a precondition is still missing,
+# for example when nobody has signed in yet.
+if [[ "${exit_code_service}" -eq 256 ]]; then
+    bashio::log.info "Remote Control stopped by signal ${exit_code_signal}."
+    [[ "${exit_code_signal}" -eq 15 ]] && exit 0
+else
+    bashio::log.info \
+        "Remote Control exited with code ${exit_code_service}, restarting..."
+fi
+
+sleep 15

@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Home Assistant Add-on: Claude Code
+# Entry point for the tmux session
+# ==============================================================================
+#
+# Claude is started directly, but a crash or a plain /exit must not leave a dead
+# pane behind: ttyd would then show a frozen terminal with no way back. Dropping
+# into a shell keeps the session usable and lets you start Claude again.
+
+cd /config || exit 1
+
+claude "$@"
+
+cat <<'EOF'
+
+Claude exited. You are in a shell in /config.
+  claude    start a new session
+  claude -c continue the previous session
+  exit      close this window
+EOF
+
+exec bash -l

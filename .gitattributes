@@ -1,0 +1,4 @@
+# Everything in this repository ends up inside a Linux container. A CRLF line
+# ending in a shell script turns the shebang into an invalid interpreter, so
+# the working tree is kept at LF regardless of the platform it is checked out on.
+* text=auto eol=lf

@@ -1,0 +1,56 @@
+---
+name: Claude Code
+version: "0.1.0"
+slug: claude-code
+description: Claude Code in your browser, for maintaining this Home Assistant installation
+url: https://github.com/Tom-Joad/ha-addon-claude-code
+image: ghcr.io/tom-joad/{arch}-ha-addon-claude-code
+arch:
+  - aarch64
+  - amd64
+init: false
+startup: services
+boot: auto
+ingress: true
+ingress_port: 0
+ingress_stream: true
+ingress_panel: true
+panel_icon: mdi:robot-outline
+panel_title: Claude
+homeassistant_api: true
+hassio_api: true
+hassio_role: manager
+auth_api: false
+docker_api: false
+full_access: false
+privileged: []
+map:
+  - type: homeassistant_config
+    read_only: false
+    path: /config
+  - type: all_app_configs
+    read_only: false
+  - type: share
+    read_only: false
+  - type: backup
+    read_only: false
+options:
+  log_level: info
+  cleanup_period_days: 14
+  claude_version: latest
+  remote_control: server
+  remote_control_name: Home Assistant
+  import_existing_state: false
+  packages: []
+  init_commands: []
+schema:
+  log_level: list(trace|debug|info|notice|warning|error|fatal)?
+  cleanup_period_days: int(1,365)
+  claude_version: str
+  remote_control: list(disabled|session|server)
+  remote_control_name: str?
+  import_existing_state: bool
+  packages:
+    - str
+  init_commands:
+    - str

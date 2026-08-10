@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# Home Assistant Add-on: Claude Code
+# Integrity baseline for the curated memory directory
+# ==============================================================================
+#
+# Curated memory is expensive to rebuild and easy to lose without noticing. The
+# baseline is a plain sha256sum manifest: "check" reports drift at the start of
+# a session, "update" accepts the current state as the new reference.
+#
+# A missing baseline is not an error. On a fresh installation there is nothing
+# to compare against yet, and the session start hook must stay silent then.
+set -u
+
+readonly MEMORY_DIR="${CLAUDE_CONFIG_DIR:-/data/claude}/memory"
+readonly BASELINE="${CLAUDE_CONFIG_DIR:-/data/claude}/memory-baseline.sha256"
+
+usage() {
+    echo "Usage: ${0##*/} check|update" >&2
+    exit 2
+}
+
+[[ $# -eq 1 ]] || usage
+
+case "${1}" in
+    check)
+        [[ -f "${BASELINE}" ]] || exit 0
+        [[ -d "${MEMORY_DIR}" ]] || exit 0
+
+        if ! output=$(cd "${MEMORY_DIR}" && sha256sum -c --quiet "${BASELINE}" 2>&1); then
+            echo "Memory baseline mismatch in ${MEMORY_DIR}:"
+            echo "${output}"
+            echo "Run '${0##*/} update' once the current state is confirmed good."
+        fi
+        # Always succeeds: this reports drift, it does not block the session.
+        exit 0
+        ;;
+    update)
+        if [[ ! -d "${MEMORY_DIR}" ]]; then
+            echo "No memory directory at ${MEMORY_DIR}" >&2
+            exit 1
+        fi
+
+        (cd "${MEMORY_DIR}" && find . -type f -print0 | sort -z \
+            | xargs -0 -r sha256sum) > "${BASELINE}.tmp" \
+            || { rm -f "${BASELINE}.tmp"; echo "Failed building baseline" >&2; exit 1; }
+
+        mv "${BASELINE}.tmp" "${BASELINE}"
+        echo "Baseline updated: $(wc -l < "${BASELINE}") file(s) in ${MEMORY_DIR}"
+        ;;
+    *)
+        usage
+        ;;
+esac

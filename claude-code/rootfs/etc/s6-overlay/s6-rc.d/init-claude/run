@@ -1,0 +1,263 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant Add-on: Claude Code
+# Prepares the persistent state and installs the Claude Code binary
+# ==============================================================================
+readonly CONFIG_DIR="/data/claude"
+readonly HOME_DIR="/data/home"
+readonly MEMORY_DIR="${CONFIG_DIR}/memory"
+readonly PROJECTS_DIR="${CONFIG_DIR}/projects"
+readonly SETTINGS_FILE="${CONFIG_DIR}/settings.json"
+readonly IMPORT_MARKER="${CONFIG_DIR}/.imported"
+readonly LEGACY_STATE="/config/.claude"
+readonly RELEASES_URL="https://downloads.claude.ai/claude-code-releases"
+readonly INSTALLER_URL="https://claude.ai/install.sh"
+readonly S6_ENV="/run/s6/container_environment"
+readonly BASELINE_HOOK="/usr/bin/claude-memory-baseline check"
+
+# Variables that switch off feature-flag evaluation. Each of them disables the
+# lookup Remote Control availability depends on, so they are mutually exclusive
+# with the feature and are only set when Remote Control is turned off.
+readonly -a PRIVACY_VARS=(
+    DISABLE_TELEMETRY
+    DO_NOT_TRACK
+    CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC
+    DISABLE_GROWTHBOOK
+)
+
+directory_is_empty() {
+    [[ -z "$(ls -A "${1}" 2>/dev/null)" ]]
+}
+
+# ------------------------------------------------------------------ directories
+#
+# $HOME has to exist before Claude Code starts: the binary writes into it during
+# startup and does not create a missing home directory itself.
+create_directories() {
+    local dir
+    for dir in "${HOME_DIR}" "${CONFIG_DIR}" "${MEMORY_DIR}" "${PROJECTS_DIR}"; do
+        mkdir -p "${dir}" \
+            || bashio::exit.nok "Failed creating ${dir}"
+    done
+}
+
+# ---------------------------------------------------------------------- import
+#
+# One-time, non-destructive import of state from a previous setup that kept it
+# inside the Home Assistant configuration directory. The source is never
+# modified and nothing is overwritten: a target that already has content wins.
+import_existing_state() {
+    bashio::config.true 'import_existing_state' || return 0
+
+    if bashio::fs.file_exists "${IMPORT_MARKER}"; then
+        bashio::log.debug 'Existing state was already imported, skipping.'
+        return 0
+    fi
+
+    if ! bashio::fs.directory_exists "${LEGACY_STATE}"; then
+        bashio::log.info "Nothing to import: ${LEGACY_STATE} does not exist."
+        touch "${IMPORT_MARKER}"
+        return 0
+    fi
+
+    bashio::log.info "Importing existing state from ${LEGACY_STATE}..."
+
+    if bashio::fs.directory_exists "${LEGACY_STATE}/memory" \
+        && directory_is_empty "${MEMORY_DIR}"; then
+        cp -a "${LEGACY_STATE}/memory/." "${MEMORY_DIR}/" \
+            && bashio::log.info "Imported curated memory into ${MEMORY_DIR}" \
+            || bashio::log.warning 'Failed importing the memory directory'
+    fi
+
+    if bashio::fs.directory_exists "${LEGACY_STATE}/projects" \
+        && directory_is_empty "${PROJECTS_DIR}"; then
+        cp -a "${LEGACY_STATE}/projects/." "${PROJECTS_DIR}/" \
+            && bashio::log.info "Imported transcripts into ${PROJECTS_DIR}" \
+            || bashio::log.warning 'Failed importing the projects directory'
+    fi
+
+    # The old settings file is carried over so hooks and preferences survive.
+    # Anything referencing the previous symlink helper is stripped further down,
+    # in configure_settings: that helper is replaced by CLAUDE_CONFIG_DIR.
+    if bashio::fs.file_exists "${LEGACY_STATE}/settings.json" \
+        && ! bashio::fs.file_exists "${SETTINGS_FILE}"; then
+        cp -a "${LEGACY_STATE}/settings.json" "${SETTINGS_FILE}" \
+            && bashio::log.info 'Imported settings.json' \
+            || bashio::log.warning 'Failed importing settings.json'
+    fi
+
+    if bashio::fs.file_exists "${LEGACY_STATE}/memory-baseline.sha256" \
+        && ! bashio::fs.file_exists "${CONFIG_DIR}/memory-baseline.sha256"; then
+        cp -a "${LEGACY_STATE}/memory-baseline.sha256" "${CONFIG_DIR}/" \
+            || bashio::log.warning 'Failed importing the memory baseline'
+    fi
+
+    touch "${IMPORT_MARKER}"
+    bashio::log.info 'Import finished. The source directory was left untouched.'
+}
+
+# ---------------------------------------------------------------------- binary
+#
+# The binary is roughly 300 MB. Keeping it in /data instead of the image keeps
+# the image small, lets it update without a rebuild, and — the reason that
+# matters on an eMMC card — avoids rewriting those 300 MB on every add-on
+# update.
+installed_version() {
+    command -v claude > /dev/null 2>&1 || return 1
+    claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1
+}
+
+install_claude() {
+    local requested="${1}"
+    local installer
+    local result=0
+
+    installer=$(mktemp) || return 1
+
+    # Downloaded to a file rather than piped straight into bash: a piped curl
+    # that fails hands bash an empty script, which then "succeeds".
+    if ! curl -fsSL --retry 3 --retry-delay 5 --max-time 120 \
+        -o "${installer}" "${INSTALLER_URL}"; then
+        rm -f "${installer}"
+        return 1
+    fi
+
+    HOME="${HOME_DIR}" bash "${installer}" "${requested}" || result=1
+    rm -f "${installer}"
+    return "${result}"
+}
+
+setup_claude_binary() {
+    local requested current target
+    requested=$(bashio::config 'claude_version' 'latest')
+    current=$(installed_version) || current=""
+    target=""
+
+    if [[ "${requested}" == "latest" ]]; then
+        # Resolved separately so an up-to-date install can skip the download
+        # entirely. A failure here is not fatal; it only costs the version check.
+        target=$(curl -fsSL --retry 3 --retry-delay 5 --max-time 60 \
+            "${RELEASES_URL}/latest" 2>/dev/null) || target=""
+        [[ "${target}" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]] || target=""
+    elif [[ "${requested}" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+        target="${requested}"
+    fi
+
+    if bashio::var.has_value "${current}"; then
+        if ! bashio::var.has_value "${target}" || [[ "${current}" == "${target}" ]]; then
+            bashio::log.info "Claude Code ${current} is installed and current."
+            return 0
+        fi
+        bashio::log.info "Updating Claude Code ${current} -> ${target}..."
+    else
+        bashio::log.info 'Installing Claude Code...'
+    fi
+
+    if install_claude "${requested}"; then
+        current=$(installed_version) || current="unknown"
+        bashio::log.info "Claude Code ${current} is ready."
+        return 0
+    fi
+
+    # The uplink here can fail over to a slow or unavailable link. If a usable
+    # binary is already on disk, a failed update must not keep the add-on down.
+    if bashio::var.has_value "${current}"; then
+        bashio::log.warning \
+            "Could not install Claude Code, keeping the installed ${current}."
+        return 0
+    fi
+
+    bashio::exit.nok \
+        'Failed installing Claude Code and no previous installation exists.
+         Check the add-on network access and restart the add-on.'
+}
+
+# -------------------------------------------------------------------- settings
+configure_settings() {
+    local cleanup mode settings updated
+    cleanup=$(bashio::config 'cleanup_period_days' 14)
+    mode=$(bashio::config 'remote_control' 'server')
+
+    settings="{}"
+    if bashio::fs.file_exists "${SETTINGS_FILE}"; then
+        if ! settings=$(jq '.' "${SETTINGS_FILE}" 2>/dev/null); then
+            bashio::log.warning \
+                "${SETTINGS_FILE} is not valid JSON; leaving it untouched."
+            return 0
+        fi
+    fi
+
+    # autoMemoryDirectory keeps curated memory out of projects/, where the
+    # throwaway transcripts live. The previous setup achieved this with a
+    # symlink; it is a supported setting now.
+    updated=$(printf '%s' "${settings}" | jq \
+        --argjson cleanup "${cleanup}" \
+        --arg memory_dir "${MEMORY_DIR}" \
+        --arg hook "${BASELINE_HOOK}" \
+        '
+          .cleanupPeriodDays = $cleanup
+        | .autoMemoryDirectory = $memory_dir
+        | .hooks.SessionStart = (
+            [ (.hooks.SessionStart // [])[]
+              | select(
+                  ([ .hooks[]?.command // empty ]
+                   | map(. == $hook or (contains("claude-persist")))
+                   | any) | not
+                )
+            ]
+            + [ { hooks: [ { type: "command", command: $hook } ] } ]
+          )
+        ') || {
+        bashio::log.warning 'Failed updating settings.json, leaving it untouched.'
+        return 0
+    }
+
+    case "${mode}" in
+        disabled)
+            updated=$(printf '%s' "${updated}" \
+                | jq '.disableRemoteControl = true | del(.remoteControlAtStartup)')
+            ;;
+        session)
+            updated=$(printf '%s' "${updated}" \
+                | jq '.remoteControlAtStartup = true | del(.disableRemoteControl)')
+            ;;
+        *)
+            updated=$(printf '%s' "${updated}" \
+                | jq 'del(.remoteControlAtStartup) | del(.disableRemoteControl)')
+            ;;
+    esac
+
+    printf '%s\n' "${updated}" > "${SETTINGS_FILE}.tmp" \
+        && mv "${SETTINGS_FILE}.tmp" "${SETTINGS_FILE}" \
+        || bashio::log.warning 'Failed writing settings.json'
+}
+
+# ----------------------------------------------------------------- environment
+#
+# Written into the s6 container environment so the services started afterwards
+# inherit it.
+configure_environment() {
+    local mode var
+    mode=$(bashio::config 'remote_control' 'server')
+
+    if [[ "${mode}" == "disabled" ]]; then
+        for var in "${PRIVACY_VARS[@]}"; do
+            printf '1' > "${S6_ENV}/${var}"
+        done
+        bashio::log.info \
+            'Remote Control is disabled; telemetry and non-essential traffic are off.'
+    else
+        for var in "${PRIVACY_VARS[@]}"; do
+            rm -f "${S6_ENV}/${var}"
+        done
+        bashio::log.info "Remote Control mode: ${mode}"
+    fi
+}
+
+# ------------------------------------------------------------------------ main
+create_directories
+import_existing_state
+setup_claude_binary
+configure_settings
+configure_environment
