@@ -26,6 +26,16 @@ See [the documentation](./claude-code/DOCS.md) for options and details.
 Add this repository to the Home Assistant add-on store, then install the
 **Claude Code** add-on from it.
 
+To install a build without adding the repository — from a private package, or
+while testing an unreleased version — see
+[docs/local-install.md](./docs/local-install.md).
+
+## Development
+
+`tools/dev/run-local.sh` builds the image and runs it on a plain Docker host,
+next to a stub that answers the Supervisor API calls bashio makes. The terminal
+comes up on `http://localhost:7681`.
+
 ## Requirements
 
 - A Home Assistant OS or Supervised installation, `aarch64` or `amd64`.
