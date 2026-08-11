@@ -8,10 +8,17 @@ nothing else is bundled in.
 
 ## Installation
 
-1. Add this repository to the Home Assistant add-on store.
-2. Install the **Claude Code** add-on.
+The add-on lives in an add-on repository, which Home Assistant has to be told
+about once:
+
+1. Open **Settings → Add-ons → Add-on Store**, choose **Repositories** from the
+   ⋮ menu, and add
+   `https://github.com/Tom-Joad/ha-addon-claude-code`.
+2. Install **Claude Code** from the section that appears.
 3. Start it, open the **Claude** panel in the sidebar, and run `/login` once to
    sign in with your Claude account.
+
+The first start downloads the Claude Code binary, which takes a minute or two.
 
 The login is stored in `/data`, so it survives restarts and updates. You only do
 it again if you remove the add-on or restore onto a fresh machine.
