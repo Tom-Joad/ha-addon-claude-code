@@ -24,7 +24,10 @@ usage() {
 
 case "${1}" in
     check)
-        [[ -f "${BASELINE}" ]] || exit 0
+        # -s, not -f: sha256sum treats an empty manifest as an error rather than
+        # as "nothing to verify", which would turn every session start into a
+        # mismatch report for a baseline that never had any content.
+        [[ -s "${BASELINE}" ]] || exit 0
         [[ -d "${MEMORY_DIR}" ]] || exit 0
 
         if ! output=$(cd "${MEMORY_DIR}" && sha256sum -c --quiet "${BASELINE}" 2>&1); then
@@ -38,6 +41,15 @@ case "${1}" in
     update)
         if [[ ! -d "${MEMORY_DIR}" ]]; then
             echo "No memory directory at ${MEMORY_DIR}" >&2
+            exit 1
+        fi
+
+        # Refused rather than written: an empty manifest is not a baseline of
+        # "no files", it is a file sha256sum rejects as malformed, and every
+        # later check would report that as a mismatch.
+        if [[ -z "$(find "${MEMORY_DIR}" -type f -print -quit)" ]]; then
+            echo "No files in ${MEMORY_DIR}, refusing to write an empty baseline." >&2
+            echo "Run this again once there is memory worth protecting." >&2
             exit 1
         fi
 

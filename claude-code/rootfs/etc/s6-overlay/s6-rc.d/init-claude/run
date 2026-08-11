@@ -13,8 +13,12 @@ readonly IMPORT_MARKER="${CONFIG_DIR}/.imported"
 readonly LEGACY_STATE="/config/.claude"
 readonly RELEASES_URL="https://downloads.claude.ai/claude-code-releases"
 readonly INSTALLER_URL="https://claude.ai/install.sh"
+readonly VERSIONS_DIR="/data/home/.local/share/claude/versions"
 readonly S6_ENV="/run/s6/container_environment"
 readonly BASELINE_HOOK="/usr/bin/claude-memory-baseline check"
+
+# shellcheck source=../../../../usr/lib/claude-addon/common.sh
+source /usr/lib/claude-addon/common.sh
 
 # Variables that switch off feature-flag evaluation. Each of them disables the
 # lookup Remote Control availability depends on, so they are mutually exclusive
@@ -44,6 +48,35 @@ create_directories() {
 
 # ---------------------------------------------------------------------- import
 #
+# cp -a copies symlinks as symlinks, and the setup this imports from joins
+# curated memory into the transcript tree with one. Here that job belongs to the
+# autoMemoryDirectory setting, so an imported link would point back into the old
+# location -- and dangle as soon as that location is cleaned up. Links that stay
+# inside /data are left alone; nothing the add-on creates relies on this.
+prune_foreign_symlinks() {
+    local dir="${1}"
+    local link target
+    local count=0
+
+    while IFS= read -r -d '' link; do
+        target=$(readlink -m "${link}" 2>/dev/null) || target=""
+        if [[ "${target}" != /data/* ]]; then
+            rm -f "${link}" \
+                && bashio::log.info \
+                    "Dropped imported symlink ${link} -> ${target:-?}" \
+                && count=$((count + 1))
+        fi
+    done < <(find "${dir}" -type l -print0 2>/dev/null)
+
+    if (( count > 0 )); then
+        bashio::log.info \
+            "Removed ${count} symlink(s) that pointed outside /data;" \
+            'memory is located through the autoMemoryDirectory setting instead.'
+    fi
+
+    return 0
+}
+
 # One-time, non-destructive import of state from a previous setup that kept it
 # inside the Home Assistant configuration directory. The source is never
 # modified and nothing is overwritten: a target that already has content wins.
@@ -93,6 +126,8 @@ import_existing_state() {
             || bashio::log.warning 'Failed importing the memory baseline'
     fi
 
+    prune_foreign_symlinks "${PROJECTS_DIR}"
+
     touch "${IMPORT_MARKER}"
     bashio::log.info 'Import finished. The source directory was left untouched.'
 }
@@ -108,10 +143,46 @@ installed_version() {
     claude --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1
 }
 
+# Each build is roughly 300 MB and nothing removes the one it replaced, so a
+# couple of updates quietly cost a gigabyte on storage that does not have one
+# spare. Only the build the launcher currently points at is kept.
+prune_old_versions() {
+    local active file
+    local removed=0
+
+    [[ -d "${VERSIONS_DIR}" ]] || return 0
+
+    active=$(readlink -f "${HOME_DIR}/.local/bin/claude" 2>/dev/null) || return 0
+    bashio::var.has_value "${active}" || return 0
+
+    for file in "${VERSIONS_DIR}"/*; do
+        [[ -f "${file}" ]] || continue
+        [[ "${file}" == "${active}" ]] && continue
+        rm -f "${file}" && removed=$((removed + 1))
+    done
+
+    if (( removed > 0 )); then
+        bashio::log.info "Removed ${removed} superseded Claude Code build(s)."
+    fi
+
+    return 0
+}
+
+# Two paths on purpose. Without a binary the official installer bootstraps one.
+# With a binary already present that installer is the wrong tool twice over: it
+# downloads its own copy of the newest build before doing anything, and it calls
+# "claude install" without --force, which sees an existing installation and
+# leaves the launcher pointing at the old build. The version then never changes,
+# so every start downloads 300 MB and concludes it still has to update.
 install_claude() {
     local requested="${1}"
     local installer
     local result=0
+
+    if command -v claude > /dev/null 2>&1; then
+        HOME="${HOME_DIR}" claude install --force "${requested}" || return 1
+        return 0
+    fi
 
     installer=$(mktemp) || return 1
 
@@ -128,19 +199,44 @@ install_claude() {
     return "${result}"
 }
 
+# Both channels publish the version they currently point at, so a channel can be
+# turned into a concrete version without downloading anything. That matters:
+# without it the freshness check below cannot tell "already up to date" from
+# "unknown", and a channel would either freeze at whatever it first installed or
+# pull 300 MB on every single start.
+resolve_channel() {
+    local channel="${1}"
+    local resolved
+
+    resolved=$(curl -fsSL --retry 3 --retry-delay 5 --max-time 60 \
+        "${RELEASES_URL}/${channel}" 2>/dev/null) || return 1
+    [[ "${resolved}" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]] || return 1
+
+    printf '%s' "${resolved}"
+}
+
 setup_claude_binary() {
     local requested current target
     requested=$(bashio::config 'claude_version' 'latest')
-    current=$(installed_version) || current=""
     target=""
 
-    if [[ "${requested}" == "latest" ]]; then
-        # Resolved separately so an up-to-date install can skip the download
-        # entirely. A failure here is not fatal; it only costs the version check.
-        target=$(curl -fsSL --retry 3 --retry-delay 5 --max-time 60 \
-            "${RELEASES_URL}/latest" 2>/dev/null) || target=""
-        [[ "${target}" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]] || target=""
-    elif [[ "${requested}" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+    # Caught here rather than by the installer, which would reject it with a
+    # usage message only after fetching itself.
+    if [[ ! "${requested}" =~ ^(latest|stable|[0-9]+\.[0-9]+\.[0-9]+([-.][^[:space:]]+)?)$ ]]; then
+        bashio::log.warning \
+            "claude_version '${requested}' is not 'latest', 'stable' or an exact" \
+            "version such as 2.1.226; using 'latest' instead."
+        requested="latest"
+    fi
+
+    current=$(installed_version) || current=""
+
+    if [[ "${requested}" == "latest" || "${requested}" == "stable" ]]; then
+        target=$(resolve_channel "${requested}") || target=""
+        bashio::var.has_value "${target}" \
+            || bashio::log.warning \
+                "Could not look up the '${requested}' version; is the network up?"
+    else
         target="${requested}"
     fi
 
@@ -156,6 +252,16 @@ setup_claude_binary() {
 
     if install_claude "${requested}"; then
         current=$(installed_version) || current="unknown"
+
+        # Guards against a silent no-op: if the launcher still points at the old
+        # build the next start would try again, and again, downloading 300 MB
+        # each time without ever getting anywhere.
+        if bashio::var.has_value "${target}" && [[ "${current}" != "${target}" ]]; then
+            bashio::log.warning \
+                "Installed Claude Code reports ${current}, expected ${target}."
+        fi
+
+        prune_old_versions
         bashio::log.info "Claude Code ${current} is ready."
         return 0
     fi
@@ -177,7 +283,7 @@ setup_claude_binary() {
 configure_settings() {
     local cleanup mode settings updated
     cleanup=$(bashio::config 'cleanup_period_days' 14)
-    mode=$(bashio::config 'remote_control' 'server')
+    mode=$(remote_control_mode)
 
     settings="{}"
     if bashio::fs.file_exists "${SETTINGS_FILE}"; then
@@ -239,7 +345,7 @@ configure_settings() {
 # inherit it.
 configure_environment() {
     local mode var
-    mode=$(bashio::config 'remote_control' 'server')
+    mode=$(remote_control_mode)
 
     if [[ "${mode}" == "disabled" ]]; then
         for var in "${PRIVACY_VARS[@]}"; do

@@ -54,7 +54,17 @@ is why the default here is lower than Claude Code's own default of 30 days.
 
 ### Option: `claude_version`
 
-`latest`, `stable`, or an exact version such as `2.1.226`.
+`latest`, `stable`, or an exact version such as `2.1.226`. Anything else is
+reported in the log and treated as `latest`.
+
+Both channels are resolved to a concrete version at startup, so the add-on can
+tell an up-to-date install from one that needs replacing without downloading
+anything to find out. Following a channel therefore picks up new releases, and
+pinning an exact version holds it there.
+
+After an update only the build in use is kept. Each one is close to 300 MB, and
+nothing else removes the one it replaced, so a handful of updates would
+otherwise cost a gigabyte on storage that rarely has one to spare.
 
 The Claude Code binary is around 300 MB and is deliberately **not** part of the
 add-on image. It is downloaded into `/data` on first start and only replaced

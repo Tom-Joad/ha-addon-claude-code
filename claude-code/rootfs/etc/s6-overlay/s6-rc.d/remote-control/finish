@@ -14,7 +14,9 @@ readonly exit_code_signal="${2}"
 # makes the connection heal by itself.
 #
 # The delay throttles the restart loop while a precondition is still missing,
-# for example when nobody has signed in yet.
+# for example when nobody has signed in yet. s6-supervise kills a finish script
+# at its timeout-finish, which defaults to 5000 ms -- shorter than this sleep --
+# so the service directory ships a timeout-finish that allows for it.
 if [[ "${exit_code_service}" -eq 256 ]]; then
     bashio::log.info "Remote Control stopped by signal ${exit_code_signal}."
     [[ "${exit_code_signal}" -eq 15 ]] && exit 0

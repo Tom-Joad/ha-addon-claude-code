@@ -1,5 +1,48 @@
 # Changelog
 
+## 0.1.2
+
+Fixes from a review pass, plus two more that verifying those fixes uncovered.
+
+Worth applying rather than skipping: on the default `claude_version: latest`,
+updating never took effect, and the add-on wrote roughly 300 MB to the
+persistent volume on every start trying again. Everything here failed quietly,
+which is the reason it went unnoticed.
+
+- `claude_version: stable` froze the version. A channel was never resolved to a
+  concrete version, so after the first install the freshness check could not
+  tell "up to date" from "unknown" and always chose to do nothing. Both `latest`
+  and `stable` are now resolved before the check, and a value that is neither a
+  channel nor a version is reported and treated as `latest` instead of being
+  handed to the installer to reject.
+- The state import carried over the very symlink it replaces. `cp -a` preserves
+  symlinks, so the old `projects/<project>/memory` link into the configuration
+  directory came along and kept pointing at the old location, ready to dangle
+  once that location was cleaned up. Imported symlinks that lead outside `/data`
+  are now dropped, and named in the log.
+- The Remote Control mode was read in two places with different fallbacks, so a
+  failed configuration read removed the Remote Control service while the rest of
+  the add-on carried on as if it were enabled. Both callers now share one
+  function, which also reports an unreadable or unknown value instead of
+  silently treating it as "not server".
+- `claude-memory-baseline update` on an empty memory directory wrote an empty
+  baseline, which `sha256sum` rejects as malformed -- so every later session
+  start reported a mismatch that looked like memory loss. It now refuses, and
+  `check` ignores an empty baseline it finds.
+- Updating never actually updated. The official installer delegates to
+  `claude install` without `--force`, which sees an existing installation and
+  leaves the launcher pointing at the old build, so the version stayed put and
+  every single start downloaded 300 MB and concluded it still had to update.
+  With a binary already present the add-on now calls `claude install --force`
+  directly, which also skips the installer's redundant download of its own copy,
+  and it warns if the version still does not match afterwards.
+- Superseded builds are removed. Nothing cleaned up the previous build, so each
+  update left another ~300 MB behind on the persistent volume.
+- The Remote Control restart delay was cut short. s6 kills a `finish` script
+  after 5 seconds by default, well before the intended 15, so the service
+  respawned faster than designed after an immediate failure. The service
+  directory now ships a `timeout-finish` that allows for it.
+
 ## 0.1.1
 
 - Fix the terminal failing to start with `iface hassio ... DOESN'T EXIST`. ttyd
