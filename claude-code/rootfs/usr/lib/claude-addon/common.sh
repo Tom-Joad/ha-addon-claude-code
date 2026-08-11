@@ -12,15 +12,19 @@
 # through one function keeps them in step, and pins down what happens when the
 # value cannot be read at all: fall back to the documented default instead of to
 # an empty string, which matches neither branch.
+#
+# That default is 'disabled', which is also the safer direction to fail in: a
+# configuration the add-on could not read must not end up opening a connection
+# the user never asked for.
 remote_control_mode() {
     local mode
-    mode=$(bashio::config 'remote_control' 'server')
+    mode=$(bashio::config 'remote_control' 'disabled')
 
     if [[ ! "${mode}" =~ ^(disabled|session|server)$ ]]; then
         bashio::log.warning \
             "Could not read a valid remote_control value (got '${mode}')," \
-            "assuming 'server'."
-        mode="server"
+            "assuming 'disabled'."
+        mode="disabled"
     fi
 
     printf '%s' "${mode}"

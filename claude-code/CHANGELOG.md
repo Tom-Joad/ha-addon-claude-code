@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.3
+
+- Remote Control is now off by default. A fresh installation stays local: no
+  session is registered, nothing is stored on Anthropic servers, and telemetry
+  and non-essential traffic are switched off with it. Set `remote_control` to
+  `session` or `server` to turn it on.
+- An unreadable configuration now falls back to `disabled` rather than to
+  `server`, so a failure to read the setting cannot end in a connection nobody
+  asked for.
+
+Existing installations keep whatever they have configured; this only changes
+what a new installation starts out with.
+
 ## 0.1.2
 
 Fixes from a review pass, plus two more that verifying those fixes uncovered.

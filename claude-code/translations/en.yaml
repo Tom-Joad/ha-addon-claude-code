@@ -20,11 +20,13 @@ configuration:
   remote_control:
     name: Remote Control
     description: >-
-      server keeps a session reachable from claude.ai/code and the Claude
-      mobile app at all times. session instead connects the terminal session
-      itself, so every device shows the same session. disabled turns the
-      feature off and switches off telemetry and non-essential traffic with
-      it. Requires a Claude Pro or Max subscription and a one-time /login.
+      Off by default. disabled turns the feature off and switches off
+      telemetry and non-essential traffic with it. session connects the
+      terminal session itself, so every device shows the same session. server
+      keeps a session reachable from claude.ai/code and the Claude mobile app
+      at all times, whether or not a terminal is open. Either of the two
+      requires a Claude Pro or Max subscription and a one-time /login, and
+      stores the session transcript on Anthropic servers while connected.
   remote_control_name:
     name: Remote Control session name
     description: >-

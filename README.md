@@ -16,8 +16,8 @@ registry.
 - The session lives in tmux: reloading the page or closing the tab does not
   interrupt a running task.
 - Login and accumulated memory persist across restarts and add-on updates.
-- Optional Remote Control, to continue a session from your phone or another
-  browser. Outbound HTTPS only.
+- Remote Control, off by default, to continue a session from your phone or
+  another browser. Outbound HTTPS only.
 
 See [the documentation](./claude-code/DOCS.md) for options and details.
 

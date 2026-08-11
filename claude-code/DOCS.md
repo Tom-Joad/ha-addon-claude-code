@@ -46,7 +46,7 @@ The add-on also gets the Supervisor and Home Assistant APIs, which is what makes
 log_level: info
 cleanup_period_days: 14
 claude_version: latest
-remote_control: server
+remote_control: disabled
 remote_control_name: Home Assistant
 import_existing_state: false
 packages: []
@@ -84,21 +84,29 @@ version it has, rather than refusing to come up.
 
 ### Option: `remote_control`
 
-Continue a session from your phone, tablet, or another browser through
-[claude.ai/code](https://claude.ai/code) or the Claude mobile app. All traffic is
-outbound HTTPS; nothing listens for incoming connections.
+Off by default. Turned on, it lets you continue a session from your phone,
+tablet, or another browser through [claude.ai/code](https://claude.ai/code) or
+the Claude mobile app. All traffic is outbound HTTPS; nothing listens for
+incoming connections.
 
 | Value | Behaviour |
 | --- | --- |
-| `server` | A dedicated service keeps a session available at all times, whether or not a browser terminal is open. Supports several concurrent sessions. |
+| `disabled` | Default. The feature is off, and `DISABLE_TELEMETRY`, `DO_NOT_TRACK`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` and `DISABLE_GROWTHBOOK` are set. Claude Code talks to the Anthropic API and to nothing else. |
 | `session` | No extra service. The terminal session connects itself, so the browser terminal, the web, and your phone all show the same session. |
-| `disabled` | The feature is off, and `DISABLE_TELEMETRY`, `DO_NOT_TRACK`, `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` and `DISABLE_GROWTHBOOK` are set. |
+| `server` | A dedicated service keeps a session available at all times, whether or not a browser terminal is open. Supports several concurrent sessions. |
 
 The three values are one setting rather than several because Remote Control and
 those environment variables are mutually exclusive: each of them disables the
 feature-flag lookup that Remote Control availability depends on, and setting
 both leaves you with a feature that reports itself as unavailable for no visible
 reason.
+
+The default is the quiet one on purpose. Turning Remote Control on means the
+session transcript is stored on Anthropic servers for as long as the connection
+lasts, so that the conversation stays in sync across your devices -- worth
+having when you want it, not worth switching on for someone who never asked.
+Note that `disabled` also switches off feature-flag evaluation in general, not
+only the part Remote Control needs.
 
 Requirements: a Claude Pro or Max subscription, signed in with `/login`. API keys
 and long-lived tokens from `claude setup-token` cannot establish a Remote Control
