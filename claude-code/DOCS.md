@@ -163,6 +163,25 @@ where the alternative is losing the work to an accidental refresh.
 If Claude exits, the pane drops to a shell in `/config` rather than dying, so
 you can start it again without restarting the add-on.
 
+## Known limitations
+
+**Copy/paste on mobile browsers.** The terminal is rendered by
+[xterm.js](https://xtermjs.org/) (via ttyd), which draws text to a canvas
+instead of real DOM text. Touch devices can't select canvas text the way they
+select a normal web page, so long-press-to-select and the system copy/paste
+menu don't work reliably in Mobile Safari or Chrome. This is an upstream
+limitation of xterm.js, not something specific to this add-on — see
+[xterm.js#3727](https://github.com/xtermjs/xterm.js/issues/3727) and
+[xterm.js#5377](https://github.com/xtermjs/xterm.js/issues/5377), both still
+open with no fix. Enabling tmux mouse mode does not help: even ttyd's own
+tracker shows a selection can be made but nothing ends up on the clipboard
+([ttyd#1454](https://github.com/tsl0922/ttyd/issues/1454)).
+
+If you need to work from a phone or tablet, enable the `remote_control`
+option and continue the session from the Claude mobile app or
+[claude.ai/code](https://claude.ai/code) instead of the in-add-on terminal —
+that's a native UI with normal text, so copy/paste behaves as expected.
+
 ## Support
 
 Open an issue at
