@@ -36,9 +36,9 @@ RUN \
         jq=1.8.1-r0 \
         less=702-r0 \
         ncurses=6.6_p20260516-r0 \
-        python3=3.14.5-r0 \
-        sqlite=3.53.2-r0 \
-        tmux=3.6b-r0 \
+        python3=3.14.7-r1 \
+        sqlite=3.53.4-r0 \
+        tmux=3.7c-r0 \
         ttyd=1.7.7-r0
 
 # Copy root filesystem
