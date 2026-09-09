@@ -1,6 +1,6 @@
 ---
 name: Claude Code
-version: "0.1.4"
+version: "0.1.5"
 slug: claude-code
 description: Claude Code in your browser, for maintaining this Home Assistant installation
 url: https://github.com/Tom-Joad/ha-addon-claude-code

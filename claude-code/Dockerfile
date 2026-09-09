@@ -48,6 +48,25 @@ RUN \
         tmux \
         ttyd
 
+# The `ha` CLI is not part of the base image, but the add-on's own instructions
+# point at it -- `ha core check` before asking for a restart, `ha core logs` to
+# see what happened. It reads $SUPERVISOR_TOKEN by itself and defaults its
+# endpoint to the `supervisor` host, both of which this add-on already has, so
+# it needs no configuration. Pinned to a release asset rather than a package:
+# a published asset stays available, so this pin cannot rot the way the apk
+# pins above did.
+ARG HA_CLI_VERSION="5.5.0"
+RUN \
+    case "$(uname -m)" in \
+        aarch64) asset="ha_aarch64" ;; \
+        x86_64) asset="ha_amd64" ;; \
+        *) echo "Unsupported architecture $(uname -m)" >&2; exit 1 ;; \
+    esac \
+    && curl -fsSL -o /usr/bin/ha \
+        "https://github.com/home-assistant/cli/releases/download/${HA_CLI_VERSION}/${asset}" \
+    && chmod a+x /usr/bin/ha \
+    && ha --help > /dev/null
+
 # Copy root filesystem
 COPY rootfs /
 

@@ -37,8 +37,10 @@ starts Claude there. Two consequences worth knowing:
   write into `.storage` directly, verify a change after making it. Your file is
   read after the add-on's, so where the two disagree, yours wins.
 
-The add-on also gets the Supervisor and Home Assistant APIs, which is what makes
-`ha core check`, Core logs, and the WebSocket API reachable from the session.
+The add-on also gets the Supervisor and Home Assistant APIs, and ships the `ha`
+CLI, which is what makes `ha core check`, Core logs, and the WebSocket API
+reachable from the session. The CLI reads the add-on's Supervisor token by
+itself, so there is nothing to configure.
 
 ## Configuration
 

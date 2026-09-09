@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.5
+
+- The `ha` CLI is now installed. The add-on's own instructions have always
+  pointed at it — `ha core check` before asking for a restart, `ha core logs`
+  to see what happened — but the base image does not carry it, so those
+  commands failed with `not found`. It reads the add-on's Supervisor token by
+  itself and needs no configuration.
+
 ## 0.1.4
 
 - Text in the terminal can be selected and copied again. Claude Code captures
