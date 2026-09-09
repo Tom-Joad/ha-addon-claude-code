@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.4
+
+- Text in the terminal can be selected and copied again. Claude Code captures
+  mouse events for its own selection, which in a browser terminal means the
+  drag never reaches xterm.js and the copy it makes instead ends up in
+  `pbcopy`, `xclip`, or the tmux paste buffer — never in the browser's
+  clipboard. The add-on now sets `CLAUDE_CODE_DISABLE_MOUSE=1`, so the terminal
+  handles selection itself: drag, then Ctrl+Shift+C (Cmd+C on macOS). This was
+  most visible at `/login`, where the OAuth URL could not be copied out at all.
+  Mouse capture can be restored for one session with
+  `env -u CLAUDE_CODE_DISABLE_MOUSE claude`.
+
 ## 0.1.3
 
 - Remote Control is now off by default. A fresh installation stays local: no

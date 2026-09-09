@@ -10,6 +10,7 @@
 export HOME="${HOME:-/data/home}"
 export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-/data/claude}"
 export HASS_SERVER="${HASS_SERVER:-http://supervisor/core}"
+export CLAUDE_CODE_DISABLE_MOUSE="${CLAUDE_CODE_DISABLE_MOUSE:-1}"
 
 case ":${PATH}:" in
     *":${HOME}/.local/bin:"*) ;;

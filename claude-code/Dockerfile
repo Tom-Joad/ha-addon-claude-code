@@ -8,11 +8,18 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Claude Code keeps all of its state under $CLAUDE_CONFIG_DIR and $HOME. Both
 # point into /data, the only directory an add-on gets that survives a restart:
 # everything else lives in the Docker overlay and is discarded.
+#
+# CLAUDE_CODE_DISABLE_MOUSE turns off Claude Code's own mouse capture. In a
+# browser terminal that capture makes text unselectable: the drag is consumed
+# by Claude Code and never reaches xterm.js, and the copy it performs instead
+# targets pbcopy/xclip or the tmux paste buffer, none of which reach the
+# browser. Without the capture the terminal handles selection itself.
 ENV \
     TERM="xterm-256color" \
     HOME="/data/home" \
     CLAUDE_CONFIG_DIR="/data/claude" \
     HASS_SERVER="http://supervisor/core" \
+    CLAUDE_CODE_DISABLE_MOUSE="1" \
     PATH="/data/home/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
     S6_STAGE2_HOOK="/etc/s6-overlay/scripts/enable-check.sh"
 

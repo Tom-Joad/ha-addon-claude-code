@@ -165,16 +165,32 @@ you can start it again without restarting the add-on.
 
 ## Known limitations
 
-**Copy/paste on mobile browsers.** The terminal is rendered by
-[xterm.js](https://xtermjs.org/) (via ttyd), which draws text to a canvas
-instead of real DOM text. Touch devices can't select canvas text the way they
-select a normal web page, so long-press-to-select and the system copy/paste
-menu don't work reliably in Mobile Safari or Chrome. This is an upstream
-limitation of xterm.js, not something specific to this add-on — see
-[xterm.js#3727](https://github.com/xtermjs/xterm.js/issues/3727) and
+**Selecting text in the terminal.** Claude Code captures mouse events to drive
+its own selection and click handling. In a browser terminal that leaves nothing
+to select: the drag is consumed by Claude Code and never reaches xterm.js, and
+the copy Claude Code performs in its place goes to `pbcopy`, `xclip`, or the
+tmux paste buffer — none of which reach the browser — so nothing arrives in
+your clipboard either. Logging in is where this hurts first, because the OAuth
+URL has to get out of the terminal somehow.
+
+The add-on therefore sets
+[`CLAUDE_CODE_DISABLE_MOUSE=1`](https://code.claude.com/docs/en/fullscreen#keep-native-text-selection),
+which hands selection back to the terminal: drag with the mouse, then press
+Ctrl+Shift+C, or Cmd+C on macOS. What this costs is click-to-position,
+click-to-expand, and wheel scrolling inside Claude Code; PgUp and PgDn still
+scroll, and tmux scrollback (`Ctrl+b` `[`) still works. For a session with
+mouse capture back on, run `env -u CLAUDE_CODE_DISABLE_MOUSE claude`.
+
+**Copy/paste on mobile browsers.** None of the above helps on a touch device.
+The terminal is rendered by [xterm.js](https://xtermjs.org/) (via ttyd), which
+draws text to a canvas instead of real DOM text. Touch devices can't select
+canvas text the way they select a normal web page, so long-press-to-select and
+the system copy/paste menu don't work reliably in Mobile Safari or Chrome. This
+is an upstream limitation of xterm.js, not something specific to this add-on —
+see [xterm.js#3727](https://github.com/xtermjs/xterm.js/issues/3727) and
 [xterm.js#5377](https://github.com/xtermjs/xterm.js/issues/5377), both still
-open with no fix. Enabling tmux mouse mode does not help: even ttyd's own
-tracker shows a selection can be made but nothing ends up on the clipboard
+open with no fix. Enabling tmux mouse mode does not help either: even ttyd's
+own tracker shows a selection can be made but nothing ends up on the clipboard
 ([ttyd#1454](https://github.com/tsl0922/ttyd/issues/1454)).
 
 If you need to work from a phone or tablet, enable the `remote_control`
