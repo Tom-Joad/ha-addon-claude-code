@@ -11,9 +11,10 @@
   most visible at `/login`, where the OAuth URL could not be copied out at all.
   Mouse capture can be restored for one session with
   `env -u CLAUDE_CODE_DISABLE_MOUSE claude`.
-- Refreshed the pinned Alpine package versions for python3, sqlite, and tmux
-  (tmux moves from 3.6b to 3.7c). The pinned versions had aged out of the
-  repository, so the image no longer built.
+- The Alpine package versions are no longer pinned to exact releases. The pins
+  had aged out of the repository and broke the build without freezing anything
+  the pinned base image tag does not already fix. tmux moves from 3.6b to 3.7c
+  as a result.
 
 ## 0.1.3
 

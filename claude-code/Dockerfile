@@ -27,19 +27,26 @@ ENV \
 # the Home Assistant tooling this add-on is meant to run is written against the
 # standard library only. The claude binary is NOT installed here; it is fetched
 # into /data at runtime so the image stays small and updates need no rebuild.
+#
+# The package versions are deliberately not pinned. What makes a build
+# reproducible here is the pinned base image tag; the Alpine branch behind it
+# keeps receiving updates, so an exact pin freezes nothing -- it only makes the
+# build fail once that version ages out of the repository, which is what
+# happened to python3, sqlite, and tmux between two builds.
+# hadolint ignore=DL3018
 RUN \
     apk add --no-cache \
-        bash=5.3.9-r1 \
-        coreutils=9.11-r0 \
-        curl=8.21.0-r0 \
-        git=2.54.0-r0 \
-        jq=1.8.1-r0 \
-        less=702-r0 \
-        ncurses=6.6_p20260516-r0 \
-        python3=3.14.7-r1 \
-        sqlite=3.53.4-r0 \
-        tmux=3.7c-r0 \
-        ttyd=1.7.7-r0
+        bash \
+        coreutils \
+        curl \
+        git \
+        jq \
+        less \
+        ncurses \
+        python3 \
+        sqlite \
+        tmux \
+        ttyd
 
 # Copy root filesystem
 COPY rootfs /
