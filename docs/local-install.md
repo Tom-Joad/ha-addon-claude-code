@@ -27,10 +27,14 @@ ha docker registries add ghcr.io --username <github-user> --password <token>
 
 ## Add the add-on locally
 
-Create `/addons/claude-code/config.yaml` on the Home Assistant machine with the
-same content as [`claude-code/config.yaml`](../claude-code/config.yaml) in this
-repository. That single file is the whole local add-on — no `Dockerfile` and no
-`rootfs`, because nothing is built.
+Create `/local_apps/claude-code/config.yaml` on the Home Assistant machine with
+the same content as [`claude-code/config.yaml`](../claude-code/config.yaml) in
+this repository. That single file is the whole local add-on — no `Dockerfile`
+and no `rootfs`, because nothing is built.
+
+`/local_apps` is where the SSH and Samba add-ons show the folder for local
+add-ons. Older versions of those add-ons (SSH before 10.5.0) show the same
+folder as `/addons`; use that path instead if `/local_apps` does not exist.
 
 Then reload the add-on store (**Settings → Add-ons → Add-on store → ⋮ → Check
 for updates**) and install **Claude Code** from the *Local add-ons* section.
@@ -39,13 +43,13 @@ for updates**) and install **Claude Code** from the *Local add-ons* section.
 
 The Supervisor pulls `image:version`, with `version` taken from that same file.
 To move to a new release, change the `version:` line in
-`/addons/claude-code/config.yaml` to match the release, reload the store, and
+`/local_apps/claude-code/config.yaml` to match the release, reload the store, and
 the add-on offers the update.
 
 ## Switching to the normal route later
 
 Once the repository and the package are public, delete
-`/addons/claude-code/`, remove the registry credentials if you no longer need
+`/local_apps/claude-code/`, remove the registry credentials if you no longer need
 them, and add the repository URL to the add-on store instead. The same
 `config.yaml` is used either way, so nothing else changes — but note that the
 add-on is then a different installation as far as the Supervisor is concerned,
