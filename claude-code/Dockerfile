@@ -23,9 +23,10 @@ ENV \
     PATH="/data/home/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
     S6_STAGE2_HOOK="/etc/s6-overlay/scripts/enable-check.sh"
 
-# python3 is installed without pip and without any extra modules on purpose:
-# the Home Assistant tooling this add-on is meant to run is written against the
-# standard library only. The claude binary is NOT installed here; it is fetched
+# python3 is installed without pip on purpose, and with a single extra module,
+# PyYAML (py3-yaml), for reading Home Assistant's YAML files; everything else
+# the Home Assistant tooling this add-on is meant to run needs comes from the
+# standard library. The claude binary is NOT installed here; it is fetched
 # into /data at runtime so the image stays small and updates need no rebuild.
 #
 # The package versions are deliberately not pinned. What makes a build
@@ -43,6 +44,7 @@ RUN \
         jq \
         less \
         ncurses \
+        py3-yaml \
         python3 \
         sqlite \
         tmux \

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6
+
+- PyYAML is now installed (`py3-yaml`), so `import yaml` works out of the box
+  for reading Home Assistant's YAML files. Note that `yaml.safe_load` rejects
+  Home Assistant's `!include` and `!secret` tags; those need a custom loader.
+
 ## 0.1.5
 
 - The `ha` CLI is now installed. The add-on's own instructions have always
