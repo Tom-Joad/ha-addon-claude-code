@@ -6,6 +6,12 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      # The builder's actions share one release and one SHA: update them in
+      # one pull request so the workflow never mixes versions.
+      home-assistant-builder:
+        patterns:
+          - "home-assistant/builder*"
   # The BUILD_FROM base image in the add-on's Dockerfile. The builder takes
   # the image from build.yaml; keep both on the same tag when merging.
   - package-ecosystem: docker
