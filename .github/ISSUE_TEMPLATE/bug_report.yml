@@ -1,0 +1,41 @@
+name: Bug report
+description: Something in the add-on doesn't work as described.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Don't post secrets:** no tokens, no Claude login data, no
+        `secrets.yaml` content, no API keys, and no parts of your
+        configuration with addresses or names in them. Redact log lines
+        before posting them.
+  - type: input
+    id: version
+    attributes:
+      label: Add-on version
+      placeholder: "0.1.6"
+    validations:
+      required: true
+  - type: input
+    id: ha
+    attributes:
+      label: Home Assistant version and installation type
+      placeholder: "2026.10.1, Home Assistant OS on a Raspberry Pi 5"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Add-on log
+      description: From the add-on's Log tab, around the problem; `log_level` debug gives more. Redacted.
+      render: text
+  - type: textarea
+    id: options
+    attributes:
+      label: Options
+      description: The add-on's options (YAML view), without anything personal.
+      render: yaml
