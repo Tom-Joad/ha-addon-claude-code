@@ -1,0 +1,14 @@
+version: 2
+updates:
+  # Actions are pinned to commit SHAs; Dependabot updates the SHA and the
+  # version comment together.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  # The BUILD_FROM base image in the add-on's Dockerfile. The builder takes
+  # the image from build.yaml; keep both on the same tag when merging.
+  - package-ecosystem: docker
+    directory: /claude-code
+    schedule:
+      interval: weekly
