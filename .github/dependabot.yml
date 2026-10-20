@@ -12,8 +12,7 @@ updates:
       home-assistant-builder:
         patterns:
           - "home-assistant/builder*"
-  # The BUILD_FROM base image in the add-on's Dockerfile. The builder takes
-  # the image from build.yaml; keep both on the same tag when merging.
+  # The base image on the FROM line of the add-on's Dockerfile.
   - package-ecosystem: docker
     directory: /claude-code
     schedule:

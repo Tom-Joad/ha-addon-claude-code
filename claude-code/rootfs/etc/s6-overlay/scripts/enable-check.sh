@@ -4,7 +4,7 @@
 # Home Assistant Add-on: Claude Code
 # Enables optional services based on the add-on configuration
 # ==============================================================================
-# shellcheck source=../../usr/lib/claude-addon/common.sh
+# shellcheck source=../../../usr/lib/claude-addon/common.sh
 source /usr/lib/claude-addon/common.sh
 
 declare mode

@@ -1,6 +1,7 @@
-ARG BUILD_FROM=ghcr.io/hassio-addons/base:21.0.1
-# hadolint ignore=DL3006
-FROM ${BUILD_FROM}
+# The base image is named here and nowhere else (no build.yaml, no
+# BUILD_FROM argument): Dependabot only updates a FROM line it can read, and
+# with the tag behind an argument the image stayed on 21.0.1 for weeks.
+FROM ghcr.io/hassio-addons/base:21.0.8
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]

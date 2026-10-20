@@ -10,11 +10,13 @@ on:
       - "claude-code/**"
       - "tools/dev/**"
       - ".github/workflows/build.yaml"
+      - ".github/dependabot.yml"
   pull_request:
     paths:
       - "claude-code/**"
       - "tools/dev/**"
       - ".github/workflows/build.yaml"
+      - ".github/dependabot.yml"
   release:
     types:
       - published
@@ -35,14 +37,32 @@ permissions:
 jobs:
   ingress-test:
     name: Ingress only
-    # The terminal is a root shell with the Supervisor token: check on every
-    # change that only Home Assistant's Ingress proxy can reach it.
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # gitleaks-action lists a pull request's commits through the API.
+      pull-requests: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0 # gitleaks needs history to scan past commits
 
+      - name: Shellcheck
+        run: |
+          shellcheck -x -P SCRIPTDIR $(git ls-files 'claude-code/rootfs/etc/s6-overlay/s6-rc.d/*/run' \
+            'claude-code/rootfs/etc/s6-overlay/s6-rc.d/*/finish' 'tools/dev/*.sh') \
+            claude-code/rootfs/etc/s6-overlay/scripts/enable-check.sh \
+            claude-code/rootfs/usr/bin/claude-session claude-code/rootfs/usr/bin/claude-memory-baseline
+
+      # The terminal is a root shell with the Supervisor token: check on every
+      # change that only Home Assistant's Ingress proxy can reach it.
       - name: Build the image and test who can reach the terminal
         run: tools/dev/ingress-test.sh
+
+      - name: Scan for secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   init:
     name: Initialize build
@@ -120,12 +140,6 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Read the base image for this architecture
-        id: base
-        run: |
-          base=$(yq -r ".build_from.${{ matrix.arch }}" claude-code/build.yaml)
-          echo "image=${base}" >> "$GITHUB_OUTPUT"
-
       - name: Build image
         uses: home-assistant/builder/actions/build-image@7412f0023ea9b6e58e8bb5059f1660f51376f49a # 2026.09.0
         with:
@@ -136,8 +150,6 @@ jobs:
           image-tags: |
             ${{ needs.init.outputs.version }}
             latest
-          build-args: |
-            BUILD_FROM=${{ steps.base.outputs.image }}
           push: ${{ needs.init.outputs.push }}
           version: ${{ needs.init.outputs.version }}
 

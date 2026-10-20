@@ -1,6 +1,20 @@
 # Changelog
 
-## 0.1.7
+All notable changes to the add-on are listed here. Versions follow
+[semantic versioning](https://semver.org/); a change that needs action when
+updating says so in its entry.
+
+## 0.1.8 - 2026-10-20
+
+- The add-on is built on the current base image (`hassio-addons/base`
+  21.0.8, Alpine 3.24.2) instead of 21.0.1. The base image was named behind
+  a build argument, where Dependabot couldn't see it, so it was never
+  updated; it is now on the Dockerfile's `FROM` line, and future base images
+  arrive as pull requests.
+- The repository's checks run shellcheck over every script and scan the
+  history for secrets on every change.
+
+## 0.1.7 - 2026-10-20
 
 - **Security:** the terminal is reachable only through Home Assistant's
   Ingress. ttyd used to listen on a port of the Supervisor's internal network,
