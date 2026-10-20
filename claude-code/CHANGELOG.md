@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.7
+
+- **Security:** the terminal is reachable only through Home Assistant's
+  Ingress. ttyd used to listen on a port of the Supervisor's internal network,
+  where every other add-on could open it without a Home Assistant login and
+  get a root shell with this add-on's Supervisor token (`manager` role). ttyd
+  now listens on a socket inside the container, and nginx in front of it
+  accepts only the Ingress proxy (`172.30.32.2`), as Home Assistant requires
+  for Ingress add-ons. Update right away if other add-ons run next to this one.
+
 ## 0.1.6
 
 - PyYAML is now installed (`py3-yaml`), so `import yaml` works out of the box

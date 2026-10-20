@@ -44,6 +44,7 @@ RUN \
         jq \
         less \
         ncurses \
+        nginx \
         py3-yaml \
         python3 \
         sqlite \
