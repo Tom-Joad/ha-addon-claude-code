@@ -4,7 +4,13 @@ All notable changes to the add-on are listed here. Versions follow
 [semantic versioning](https://semver.org/); a change that needs action when
 updating says so in its entry.
 
-## 0.1.8 - 2026-10-20
+## 0.1.9 - 2026-10-20
+
+- Same add-on as 0.1.8, which was never published: its release build
+  stopped at the new secret scan, which doesn't run for releases. Update
+  from 0.1.7 straight to 0.1.9.
+
+## 0.1.8 - 2026-10-20 (not published)
 
 - The add-on is built on the current base image (`hassio-addons/base`
   21.0.8, Alpine 3.24.2) instead of 21.0.1. The base image was named behind
