@@ -5,7 +5,7 @@
 # Runs the ttyd daemon that serves the terminal through Ingress
 # ==============================================================================
 declare -a options
-declare ingress_port
+readonly SOCKET="/run/ttyd.sock"
 
 bashio::log.info 'Starting the ttyd daemon...'
 
@@ -15,26 +15,11 @@ else
     options+=(-d1)
 fi
 
-if [[ "${TTYD_BIND_ALL:-0}" == "1" ]]; then
-    # Test mode: a plain Docker host has no Supervisor API to ask for a port.
-    # Never reached inside Home Assistant.
-    ingress_port="${INGRESS_PORT:-7681}"
-    bashio::log.warning "Test mode: using port ${ingress_port}."
-else
-    # Home Assistant assigns the Ingress port dynamically. Ingress terminates
-    # the authentication and proxies the stream, so ttyd needs no base path.
-    ingress_port=$(bashio::app.ingress_port)
-    bashio::var.has_value "${ingress_port}" \
-        || bashio::exit.nok 'Could not determine the Ingress port'
-fi
-
-# No -i: this container is attached to the Supervisor's bridge as an ordinary
-# member, where its interface is eth0 and no interface named "hassio" exists --
-# that name only resolves for add-ons running with host_network, which this one
-# deliberately does not. Binding every interface is what other Ingress add-ons
-# do as well; the add-on publishes no port, so the only route in from outside
-# the bridge is Ingress, with Home Assistant's authentication in front of it.
-options+=(-p "${ingress_port}")
+# A UNIX socket, not a port: every add-on on the Supervisor's bridge could
+# reach a port, and ttyd has no login of its own. The ingress service (nginx)
+# listens on the Ingress port and only lets Home Assistant's proxy through.
+rm -f "${SOCKET}"
+options+=(-i "${SOCKET}")
 options+=(--writable)
 
 # Working directory matters twice over: it is what makes Claude Code pick up

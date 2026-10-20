@@ -76,7 +76,7 @@ docker run -d --name claude-test \
     -e SUPERVISOR_TOKEN=stub-token \
     -e TTYD_BIND_ALL=1 \
     -e "INGRESS_PORT=${PORT}" \
-    -p "${PORT}:${PORT}" \
+    -p "127.0.0.1:${PORT}:${PORT}" \
     -v "${ROOT}/.testenv/data:/data" \
     -v "${ROOT}/.testenv/config:/config" \
     "${IMAGE}" > /dev/null

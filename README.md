@@ -59,7 +59,9 @@ build on the Home Assistant machine. See
 
 `tools/dev/run-local.sh` builds the image and runs it on a plain Docker host,
 next to a stub that answers the Supervisor API calls bashio makes. The terminal
-comes up on `http://localhost:7681`.
+comes up on `http://localhost:7681` (bound to localhost only).
+`tools/dev/ingress-test.sh` checks that only Home Assistant's Ingress proxy
+can reach the terminal; CI runs it on every change.
 
 ## Requirements
 

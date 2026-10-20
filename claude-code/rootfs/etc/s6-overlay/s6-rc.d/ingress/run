@@ -1,0 +1,70 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant Add-on: Claude Code
+# Runs nginx in front of ttyd and only lets Home Assistant's Ingress in
+# ==============================================================================
+declare ingress_port
+declare allow
+readonly CONFIG="/run/ingress-nginx.conf"
+readonly SOCKET="/run/ttyd.sock"
+
+# The add-on sits on the Supervisor's bridge next to every other add-on.
+# ttyd has no authentication of its own, so whoever reaches it gets a root
+# shell with the Supervisor token. Home Assistant's Ingress proxy always
+# connects from 172.30.32.2, and its documentation requires an Ingress add-on
+# to accept that address and nothing else. ttyd itself only listens on a
+# UNIX socket; this nginx is the one way in.
+if [[ "${TTYD_BIND_ALL:-0}" == "1" ]]; then
+    # Test mode: a plain Docker host has no Supervisor API to ask for a port,
+    # and no Ingress proxy at 172.30.32.2. Never reached inside Home Assistant.
+    ingress_port="${INGRESS_PORT:-7681}"
+    allow="allow all;"
+    bashio::log.warning "Test mode: port ${ingress_port}, open to every address."
+else
+    # Home Assistant assigns the Ingress port dynamically. Ingress terminates
+    # the authentication and proxies the stream, so ttyd needs no base path.
+    ingress_port=$(bashio::app.ingress_port)
+    bashio::var.has_value "${ingress_port}" \
+        || bashio::exit.nok 'Could not determine the Ingress port'
+    allow="allow 172.30.32.2;"
+fi
+
+# Workers run as root: ttyd creates its socket as root, and nothing else in
+# this container runs unprivileged either.
+cat > "${CONFIG}" <<NGINX
+user root;
+worker_processes 1;
+pid /run/ingress-nginx.pid;
+error_log /dev/stderr warn;
+events {
+    worker_connections 64;
+}
+http {
+    access_log off;
+    map \$http_upgrade \$connection_upgrade {
+        default upgrade;
+        '' close;
+    }
+    server {
+        listen ${ingress_port} default_server;
+        ${allow}
+        deny all;
+        location / {
+            proxy_pass http://unix:${SOCKET};
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade \$http_upgrade;
+            proxy_set_header Connection \$connection_upgrade;
+            proxy_set_header Host \$host;
+            proxy_buffering off;
+            # A terminal can sit idle for hours; tmux keeps the session, but
+            # the browser should not lose the connection over it.
+            proxy_read_timeout 1d;
+            proxy_send_timeout 1d;
+        }
+    }
+}
+NGINX
+
+bashio::log.info "Ingress on port ${ingress_port}, for 172.30.32.2 only."
+exec nginx -c "${CONFIG}" -g 'daemon off;'
