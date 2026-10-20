@@ -23,7 +23,6 @@ export MSYS_NO_PATHCONV=1
 export MSYS2_ARG_CONV_EXCL='*'
 
 IMAGE="${IMAGE:-claude-addon:test}"
-BASE="${BASE:-ghcr.io/hassio-addons/base:21.0.1}"
 NET=claude-test-net
 PORT="${PORT:-7681}"
 REMOTE_CONTROL="${REMOTE_CONTROL:-disabled}"
@@ -53,7 +52,7 @@ EOF
 fi
 
 echo "==> Building ${IMAGE}"
-docker build -q --build-arg "BUILD_FROM=${BASE}" -t "${IMAGE}" claude-code > /dev/null
+docker build -q -t "${IMAGE}" claude-code > /dev/null
 
 docker rm -f claude-test supervisor-stub > /dev/null 2>&1 || true
 docker network create "${NET}" > /dev/null 2>&1 || true

@@ -98,16 +98,20 @@ import_existing_state() {
 
     if bashio::fs.directory_exists "${LEGACY_STATE}/memory" \
         && directory_is_empty "${MEMORY_DIR}"; then
-        cp -a "${LEGACY_STATE}/memory/." "${MEMORY_DIR}/" \
-            && bashio::log.info "Imported curated memory into ${MEMORY_DIR}" \
-            || bashio::log.warning 'Failed importing the memory directory'
+        if cp -a "${LEGACY_STATE}/memory/." "${MEMORY_DIR}/"; then
+            bashio::log.info "Imported curated memory into ${MEMORY_DIR}"
+        else
+            bashio::log.warning 'Failed importing the memory directory'
+        fi
     fi
 
     if bashio::fs.directory_exists "${LEGACY_STATE}/projects" \
         && directory_is_empty "${PROJECTS_DIR}"; then
-        cp -a "${LEGACY_STATE}/projects/." "${PROJECTS_DIR}/" \
-            && bashio::log.info "Imported transcripts into ${PROJECTS_DIR}" \
-            || bashio::log.warning 'Failed importing the projects directory'
+        if cp -a "${LEGACY_STATE}/projects/." "${PROJECTS_DIR}/"; then
+            bashio::log.info "Imported transcripts into ${PROJECTS_DIR}"
+        else
+            bashio::log.warning 'Failed importing the projects directory'
+        fi
     fi
 
     # The old settings file is carried over so hooks and preferences survive.
@@ -115,9 +119,11 @@ import_existing_state() {
     # in configure_settings: that helper is replaced by CLAUDE_CONFIG_DIR.
     if bashio::fs.file_exists "${LEGACY_STATE}/settings.json" \
         && ! bashio::fs.file_exists "${SETTINGS_FILE}"; then
-        cp -a "${LEGACY_STATE}/settings.json" "${SETTINGS_FILE}" \
-            && bashio::log.info 'Imported settings.json' \
-            || bashio::log.warning 'Failed importing settings.json'
+        if cp -a "${LEGACY_STATE}/settings.json" "${SETTINGS_FILE}"; then
+            bashio::log.info 'Imported settings.json'
+        else
+            bashio::log.warning 'Failed importing settings.json'
+        fi
     fi
 
     if bashio::fs.file_exists "${LEGACY_STATE}/memory-baseline.sha256" \
@@ -334,9 +340,10 @@ configure_settings() {
             ;;
     esac
 
-    printf '%s\n' "${updated}" > "${SETTINGS_FILE}.tmp" \
-        && mv "${SETTINGS_FILE}.tmp" "${SETTINGS_FILE}" \
-        || bashio::log.warning 'Failed writing settings.json'
+    if ! { printf '%s\n' "${updated}" > "${SETTINGS_FILE}.tmp" \
+        && mv "${SETTINGS_FILE}.tmp" "${SETTINGS_FILE}"; }; then
+        bashio::log.warning 'Failed writing settings.json'
+    fi
 }
 
 # ----------------------------------------------------------------- environment
