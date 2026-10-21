@@ -9,8 +9,6 @@ readonly HOME_DIR="/data/home"
 readonly MEMORY_DIR="${CONFIG_DIR}/memory"
 readonly PROJECTS_DIR="${CONFIG_DIR}/projects"
 readonly SETTINGS_FILE="${CONFIG_DIR}/settings.json"
-readonly IMPORT_MARKER="${CONFIG_DIR}/.imported"
-readonly LEGACY_STATE="/config/.claude"
 readonly RELEASES_URL="https://downloads.claude.ai/claude-code-releases"
 readonly INSTALLER_URL="https://claude.ai/install.sh"
 readonly VERSIONS_DIR="/data/home/.local/share/claude/versions"
@@ -30,10 +28,6 @@ readonly -a PRIVACY_VARS=(
     DISABLE_GROWTHBOOK
 )
 
-directory_is_empty() {
-    [[ -z "$(ls -A "${1}" 2>/dev/null)" ]]
-}
-
 # ------------------------------------------------------------------ directories
 #
 # $HOME has to exist before Claude Code starts: the binary writes into it during
@@ -44,98 +38,6 @@ create_directories() {
         mkdir -p "${dir}" \
             || bashio::exit.nok "Failed creating ${dir}"
     done
-}
-
-# ---------------------------------------------------------------------- import
-#
-# cp -a copies symlinks as symlinks, and the setup this imports from joins
-# curated memory into the transcript tree with one. Here that job belongs to the
-# autoMemoryDirectory setting, so an imported link would point back into the old
-# location -- and dangle as soon as that location is cleaned up. Links that stay
-# inside /data are left alone; nothing the add-on creates relies on this.
-prune_foreign_symlinks() {
-    local dir="${1}"
-    local link target
-    local count=0
-
-    while IFS= read -r -d '' link; do
-        target=$(readlink -m "${link}" 2>/dev/null) || target=""
-        if [[ "${target}" != /data/* ]]; then
-            rm -f "${link}" \
-                && bashio::log.info \
-                    "Dropped imported symlink ${link} -> ${target:-?}" \
-                && count=$((count + 1))
-        fi
-    done < <(find "${dir}" -type l -print0 2>/dev/null)
-
-    if (( count > 0 )); then
-        bashio::log.info \
-            "Removed ${count} symlink(s) that pointed outside /data;" \
-            'memory is located through the autoMemoryDirectory setting instead.'
-    fi
-
-    return 0
-}
-
-# One-time, non-destructive import of state from a previous setup that kept it
-# inside the Home Assistant configuration directory. The source is never
-# modified and nothing is overwritten: a target that already has content wins.
-import_existing_state() {
-    bashio::config.true 'import_existing_state' || return 0
-
-    if bashio::fs.file_exists "${IMPORT_MARKER}"; then
-        bashio::log.debug 'Existing state was already imported, skipping.'
-        return 0
-    fi
-
-    if ! bashio::fs.directory_exists "${LEGACY_STATE}"; then
-        bashio::log.info "Nothing to import: ${LEGACY_STATE} does not exist."
-        touch "${IMPORT_MARKER}"
-        return 0
-    fi
-
-    bashio::log.info "Importing existing state from ${LEGACY_STATE}..."
-
-    if bashio::fs.directory_exists "${LEGACY_STATE}/memory" \
-        && directory_is_empty "${MEMORY_DIR}"; then
-        if cp -a "${LEGACY_STATE}/memory/." "${MEMORY_DIR}/"; then
-            bashio::log.info "Imported curated memory into ${MEMORY_DIR}"
-        else
-            bashio::log.warning 'Failed importing the memory directory'
-        fi
-    fi
-
-    if bashio::fs.directory_exists "${LEGACY_STATE}/projects" \
-        && directory_is_empty "${PROJECTS_DIR}"; then
-        if cp -a "${LEGACY_STATE}/projects/." "${PROJECTS_DIR}/"; then
-            bashio::log.info "Imported transcripts into ${PROJECTS_DIR}"
-        else
-            bashio::log.warning 'Failed importing the projects directory'
-        fi
-    fi
-
-    # The old settings file is carried over so hooks and preferences survive.
-    # Anything referencing the previous symlink helper is stripped further down,
-    # in configure_settings: that helper is replaced by CLAUDE_CONFIG_DIR.
-    if bashio::fs.file_exists "${LEGACY_STATE}/settings.json" \
-        && ! bashio::fs.file_exists "${SETTINGS_FILE}"; then
-        if cp -a "${LEGACY_STATE}/settings.json" "${SETTINGS_FILE}"; then
-            bashio::log.info 'Imported settings.json'
-        else
-            bashio::log.warning 'Failed importing settings.json'
-        fi
-    fi
-
-    if bashio::fs.file_exists "${LEGACY_STATE}/memory-baseline.sha256" \
-        && ! bashio::fs.file_exists "${CONFIG_DIR}/memory-baseline.sha256"; then
-        cp -a "${LEGACY_STATE}/memory-baseline.sha256" "${CONFIG_DIR}/" \
-            || bashio::log.warning 'Failed importing the memory baseline'
-    fi
-
-    prune_foreign_symlinks "${PROJECTS_DIR}"
-
-    touch "${IMPORT_MARKER}"
-    bashio::log.info 'Import finished. The source directory was left untouched.'
 }
 
 # ---------------------------------------------------------------------- binary
@@ -370,7 +272,6 @@ configure_environment() {
 
 # ------------------------------------------------------------------------ main
 create_directories
-import_existing_state
 setup_claude_binary
 configure_settings
 configure_environment

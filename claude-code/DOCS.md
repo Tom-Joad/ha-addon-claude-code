@@ -50,7 +50,6 @@ cleanup_period_days: 14
 claude_version: latest
 remote_control: disabled
 remote_control_name: Home Assistant
-import_existing_state: false
 packages: []
 init_commands: []
 ```
@@ -118,18 +117,6 @@ In `server` mode the service waits until you have signed in and starts on its
 own afterwards. If the machine loses network for more than about ten minutes the
 remote session times out and the process exits; the add-on restarts it, so the
 connection comes back by itself.
-
-### Option: `import_existing_state`
-
-For migrating from a setup that ran Claude Code elsewhere — for example as a
-VS Code extension inside another add-on — with state under
-`<config>/.claude`.
-
-Set it to `true` and restart once. Curated memory, transcripts, the settings
-file and an existing memory baseline are copied into the add-on's own storage.
-Nothing already present is overwritten, and the source directory is not
-modified. A marker file makes sure the import runs only once; you can set the
-option back to `false` afterwards.
 
 ### Option: `packages` / `init_commands`
 
