@@ -37,7 +37,6 @@ cat > .testenv/data/options.json <<EOF
   "claude_version": "${CLAUDE_VERSION}",
   "remote_control": "${REMOTE_CONTROL}",
   "remote_control_name": "Home Assistant (local)",
-  "import_existing_state": false,
   "packages": [],
   "init_commands": []
 }

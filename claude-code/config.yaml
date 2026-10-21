@@ -1,6 +1,6 @@
 ---
 name: Claude Code
-version: "0.1.9"
+version: "1.0.0"
 slug: claude-code
 description: Claude Code in your browser, for maintaining this Home Assistant installation
 url: https://github.com/Tom-Joad/ha-addon-claude-code
@@ -40,7 +40,6 @@ options:
   claude_version: latest
   remote_control: disabled
   remote_control_name: Home Assistant
-  import_existing_state: false
   packages: []
   init_commands: []
 schema:
@@ -49,7 +48,6 @@ schema:
   claude_version: str
   remote_control: list(disabled|session|server)
   remote_control_name: str?
-  import_existing_state: bool
   packages:
     - str
   init_commands:

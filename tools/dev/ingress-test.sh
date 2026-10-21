@@ -42,7 +42,7 @@ mkdir -p "${WORK}/data" "${WORK}/config"
 cat > "${WORK}/data/options.json" <<'EOF'
 {"log_level": "info", "cleanup_period_days": 14, "claude_version": "latest",
  "remote_control": "disabled", "remote_control_name": "test",
- "import_existing_state": false, "packages": [], "init_commands": []}
+ "packages": [], "init_commands": []}
 EOF
 
 docker network create --subnet 172.30.32.0/23 "${NET}" > /dev/null

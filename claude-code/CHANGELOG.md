@@ -1,8 +1,21 @@
 # Changelog
 
 All notable changes to the add-on are listed here. Versions follow
-[semantic versioning](https://semver.org/); a change that needs action when
-updating says so in its entry.
+[semantic versioning](https://semver.org/): from 1.0.0 on, a change that needs
+action when updating (a removed or renamed option, moved state) only comes
+with a new major version, and its entry says what to do.
+
+## 1.0.0 - 2026-10-21
+
+The first stable release: the options and where the add-on keeps its state
+are settled, and change only with a new major version.
+
+- **Removed:** the option `import_existing_state`. It copied state once from
+  `<config>/.claude` when moving from a setup that ran Claude Code elsewhere.
+  Nothing to do when updating: a value still saved for it is ignored (the
+  Supervisor logs it as an unknown option until the configuration is saved
+  again), and state imported earlier stays where it is.
+- The add-on has its own icon and logo in the add-on store.
 
 ## 0.1.9 - 2026-10-20
 

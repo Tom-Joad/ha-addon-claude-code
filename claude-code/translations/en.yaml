@@ -31,13 +31,6 @@ configuration:
     name: Remote Control session name
     description: >-
       The name this machine's session shows up under in the session list.
-  import_existing_state:
-    name: Import existing state
-    description: >-
-      Once, on the next start, copy memory, transcripts and settings from
-      <config>/.claude into the add-on's own storage. Nothing is overwritten
-      and the source is left untouched. Only useful when migrating from a
-      setup that ran Claude Code somewhere else.
   packages:
     name: Extra packages
     description: >-
