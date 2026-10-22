@@ -1,7 +1,7 @@
 # The base image is named here and nowhere else (no build.yaml, no
 # BUILD_FROM argument): Dependabot only updates a FROM line it can read, and
 # with the tag behind an argument the image stayed on 21.0.1 for weeks.
-FROM ghcr.io/hassio-addons/base:21.0.8
+FROM ghcr.io/hassio-addons/base:21.0.9
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -35,9 +35,11 @@ ENV \
 # keeps receiving updates, so an exact pin freezes nothing -- it only makes the
 # build fail once that version ages out of the repository, which is what
 # happened to python3, sqlite, and tmux between two builds.
-# hadolint ignore=DL3018
+# The upgrade picks up Alpine fixes newer than the base image (musl, nginx).
+# hadolint ignore=DL3017,DL3018
 RUN \
-    apk add --no-cache \
+    apk upgrade --no-cache \
+    && apk add --no-cache \
         bash \
         coreutils \
         curl \
@@ -59,7 +61,7 @@ RUN \
 # it needs no configuration. Pinned to a release asset rather than a package:
 # a published asset stays available, so this pin cannot rot the way the apk
 # pins above did.
-ARG HA_CLI_VERSION="5.5.0"
+ARG HA_CLI_VERSION="5.6.0"
 RUN \
     case "$(uname -m)" in \
         aarch64) asset="ha_aarch64" ;; \
