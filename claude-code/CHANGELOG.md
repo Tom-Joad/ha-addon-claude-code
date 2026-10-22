@@ -5,6 +5,19 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
+## 1.0.1 - 2026-10-22
+
+Security updates, nothing to do when updating.
+
+- nginx 1.30.6 (six CVEs fixed, among them session forgery with TLS session
+  tickets and an HTTP/3 request body injection) and musl 1.2.6-r3
+  (CVE-2026-107891). The image now upgrades its Alpine packages when it is
+  built, so it no longer waits for a new base image to get them.
+- The `ha` CLI 5.6.0 (was 5.5.0): newer Go libraries, three of its eight
+  known HIGH vulnerabilities gone; the rest await a CLI release built with
+  the fixed libraries.
+- Base image 21.0.9.
+
 ## 1.0.0 - 2026-10-21
 
 The first stable release: the options and where the add-on keeps its state
