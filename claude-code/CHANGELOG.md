@@ -5,6 +5,13 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
+## 1.0.2 - 2026-10-26
+
+### Security
+- Security updates of the distribution packages, picked up by rebuilding the image:
+  - `curl` 8.23.0-r0 (CVE-2026-92392)
+  - `libcurl` 8.23.0-r0 (CVE-2026-92392)
+
 ## 1.0.1 - 2026-10-22
 
 Security updates, nothing to do when updating.
