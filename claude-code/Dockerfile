@@ -24,6 +24,12 @@ ENV \
     PATH="/data/home/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
     S6_STAGE2_HOOK="/etc/s6-overlay/scripts/enable-check.sh"
 
+# The builder passes the add-on version as a build argument. Declared before
+# the package step, a new version makes that step miss the build cache, so
+# every release runs `apk upgrade` again: without it, 1.0.2 reused the cached
+# layer of 1.0.1 and shipped the old curl.
+ARG BUILD_VERSION
+
 # python3 is installed without pip on purpose, and with a single extra module,
 # PyYAML (py3-yaml), for reading Home Assistant's YAML files; everything else
 # the Home Assistant tooling this add-on is meant to run needs comes from the
