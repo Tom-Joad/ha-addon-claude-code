@@ -5,6 +5,19 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
+## 1.0.3 - 2026-10-27
+
+### Security
+- Security updates of the distribution packages, picked up by rebuilding the image:
+  - `python3` 3.14.10-r0 (CVE-2026-114583, CVE-2026-115557, CVE-2026-12345)
+  - `curl` and `libcurl` 8.23.0-r0 (CVE-2026-92392): announced for 1.0.2, but
+    its image did not contain them.
+
+### Fixed
+- The image build reused the cached package layer of the previous version, so
+  `apk upgrade` did not run again and 1.0.2 shipped curl 8.22.0. Every new
+  version now runs the package step again.
+
 ## 1.0.2 - 2026-10-26
 
 ### Security
