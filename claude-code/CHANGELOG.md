@@ -5,6 +5,17 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
+## 1.0.4 - 2026-10-27
+
+### Security
+- `curl` and `libcurl` 8.23.0-r0 (CVE-2026-92392). 1.0.2 and 1.0.3 named them,
+  but both images still contained 8.22.0.
+
+### Fixed
+- The base image pins exact package versions, and the upgrade during the build
+  left those packages alone. The build now drops these pins first, so every
+  package is upgraded.
+
 ## 1.0.3 - 2026-10-27
 
 ### Security

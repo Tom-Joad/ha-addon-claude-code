@@ -42,9 +42,13 @@ ARG BUILD_VERSION
 # build fail once that version ages out of the repository, which is what
 # happened to python3, sqlite, and tmux between two builds.
 # The upgrade picks up Alpine fixes newer than the base image (musl, nginx).
+# The base image pins exact versions in /etc/apk/world (curl=8.22.0-r0 in
+# 21.0.9), and apk upgrade never moves a pinned package, so the pins are
+# dropped first: 1.0.3 kept curl 8.22.0 because of that pin.
 # hadolint ignore=DL3017,DL3018
 RUN \
-    apk upgrade --no-cache \
+    sed -i 's/[=<>~].*$//' /etc/apk/world \
+    && apk upgrade --no-cache \
     && apk add --no-cache \
         bash \
         coreutils \
