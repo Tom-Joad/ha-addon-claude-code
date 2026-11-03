@@ -5,6 +5,16 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
+## 1.0.6 - 2026-11-03
+
+### Changed
+- Updated dependencies:
+  - hassio-addons/base from 21.0.9 to 21.0.10 in /claude-code
+
+### Security
+- Security updates of the distribution packages, picked up by rebuilding the image:
+  - `libexpat` 2.10.0-r0 (CVE-2026-117610, CVE-2026-118370)
+
 ## 1.0.5 - 2026-10-28
 
 ### Security
