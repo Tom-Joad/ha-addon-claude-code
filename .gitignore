@@ -1,2 +1,5 @@
 # Local test harness: stub Supervisor, add-on options and downloaded binary
 .testenv/
+
+# Python byte code (from running scripts in .github/ locally)
+__pycache__/
