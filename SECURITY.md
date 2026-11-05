@@ -35,3 +35,17 @@ Images are built by GitHub Actions with Home Assistant's builder for each
 published release. Third-party actions are pinned to commit SHAs, the base
 image to a version tag, and the `ha` CLI to a release. The Claude Code
 binary is downloaded at add-on start from Anthropic's release channel.
+
+Home Assistant's builder signs each image and the multi-arch manifest with
+cosign, keyless through GitHub's OIDC token. To check the image your
+system runs (`amd64` or `aarch64`), with cosign 3:
+
+```sh
+cosign verify ghcr.io/tom-joad/amd64-ha-addon-claude-code:<VERSION> \
+  --certificate-identity-regexp '^https://github.com/Tom-Joad/ha-addon-claude-code/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+There is no SBOM or provenance attestation: the builder doesn't produce
+them. A daily scan of the published image opens an issue for every fixable
+vulnerability.
