@@ -33,8 +33,19 @@ the terminal (since 0.1.7; `tools/dev/ingress-test.sh` checks it). Of particular
 
 Images are built by GitHub Actions with Home Assistant's builder for each
 published release. Third-party actions are pinned to commit SHAs, the base
-image to a version tag, and the `ha` CLI to a release. The Claude Code
-binary is downloaded at add-on start from Anthropic's release channel.
+image to a version tag, and the `ha` CLI to a release whose SHA-256 is
+checked during the build.
+
+**What the signature does not cover:** the Claude Code binary. At every
+add-on start the add-on reads the version of the chosen channel from
+`downloads.claude.ai`, and when it differs from the installed one it runs
+Anthropic's installer (`https://claude.ai/install.sh`) or `claude install`,
+which download the binary from Anthropic. Only TLS protects that download; the
+add-on doesn't verify a checksum or signature. What it installs runs with the
+add-on's rights: as root, with the Supervisor token, write access to `/config`,
+`/backup` and the add-on configurations. Pin `claude_version` to an exact
+version to limit it to a release you chose; the download still happens when
+that version isn't installed yet.
 
 Home Assistant's builder signs each image and the multi-arch manifest with
 cosign, keyless through GitHub's OIDC token. To check the image your

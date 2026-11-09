@@ -29,6 +29,18 @@ with a new major version, and its entry says what to do.
 - An empty `settings.json` is treated as `{}`, so the add-on's settings
   (transcript retention, memory folder, Remote Control) are applied again.
   A file that isn't a JSON object is still left untouched.
+- Stopping or updating the add-on with `remote_control: server` no longer waits
+  for the restart delay of the Remote Control service. It used to run into the
+  Supervisor's stop timeout and end in a SIGKILL; a stop now takes a few
+  seconds.
+
+### Security
+- The `ha` CLI downloaded while building the image is checked against its
+  SHA-256.
+
+### Docs
+- `SECURITY.md` and `DOCS.md` say that the Claude Code binary is downloaded at
+  start, is not covered by the image signature and runs with the add-on's rights.
 
 ## 1.0.6 - 2026-11-03
 

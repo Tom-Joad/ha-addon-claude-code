@@ -77,15 +77,24 @@ RUN \
 # it needs no configuration. Pinned to a release asset rather than a package:
 # a published asset stays available, so this pin cannot rot the way the apk
 # pins above did.
+#
+# The SHA-256 of each architecture's asset is pinned next to the version and
+# checked before the binary is installed, so a replaced release asset fails
+# the build instead of going into the image. Dependabot can't update these:
+# bump the version and both sums together (GitHub lists each asset's sha256 on
+# the release, e.g. `gh api repos/home-assistant/cli/releases/tags/<version>`).
 ARG HA_CLI_VERSION="5.6.0"
+ARG HA_CLI_SHA256_AMD64="9d259c700bfcd45b6a793709e1fcfd304a595624dda10cfa5edde66f0b8a9656"
+ARG HA_CLI_SHA256_AARCH64="4ecdbd67002defbf96e4668e62f631e9767b92d18e1ce54bfee6ddd040c20e73"
 RUN \
     case "$(uname -m)" in \
-        aarch64) asset="ha_aarch64" ;; \
-        x86_64) asset="ha_amd64" ;; \
+        aarch64) asset="ha_aarch64"; sha256="${HA_CLI_SHA256_AARCH64}" ;; \
+        x86_64) asset="ha_amd64"; sha256="${HA_CLI_SHA256_AMD64}" ;; \
         *) echo "Unsupported architecture $(uname -m)" >&2; exit 1 ;; \
     esac \
     && curl -fsSL -o /usr/bin/ha \
         "https://github.com/home-assistant/cli/releases/download/${HA_CLI_VERSION}/${asset}" \
+    && echo "${sha256}  /usr/bin/ha" | sha256sum -c - \
     && chmod a+x /usr/bin/ha \
     && ha --help > /dev/null
 

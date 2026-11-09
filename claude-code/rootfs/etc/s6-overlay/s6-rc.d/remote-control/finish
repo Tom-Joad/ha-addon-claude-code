@@ -17,6 +17,11 @@ readonly exit_code_signal="${2}"
 # for example when nobody has signed in yet. s6-supervise kills a finish script
 # at its timeout-finish, which defaults to 5000 ms -- shorter than this sleep --
 # so the service directory ships a timeout-finish that allows for it.
+#
+# The wait is cut short as soon as s6 no longer wants the service up, which is
+# what stopping the add-on does. The Supervisor gives an add-on 10 seconds to
+# stop; a finish script still sleeping at that point ends in a SIGKILL that can
+# cut off tmux and Claude in the middle of a write to /data.
 if [[ "${exit_code_service}" -eq 256 ]]; then
     bashio::log.info "Remote Control stopped by signal ${exit_code_signal}."
     [[ "${exit_code_signal}" -eq 15 ]] && exit 0
@@ -25,4 +30,7 @@ else
         "Remote Control exited with code ${exit_code_service}, restarting..."
 fi
 
-sleep 15
+for (( waited=0; waited<15; waited++ )); do
+    [[ $(s6-svstat -o wantedup /run/service/remote-control) == "false" ]] && exit 0
+    sleep 1
+done
