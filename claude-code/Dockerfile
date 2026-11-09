@@ -15,12 +15,18 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # by Claude Code and never reaches xterm.js, and the copy it performs instead
 # targets pbcopy/xclip or the tmux paste buffer, none of which reach the
 # browser. Without the capture the terminal handles selection itself.
+#
+# DISABLE_AUTOUPDATER: the add-on manages the version itself (claude_version).
+# Claude Code's own updater would move the launcher past a pinned or stable
+# version during a session, and the next start would then download 300 MB
+# again to move it back.
 ENV \
     TERM="xterm-256color" \
     HOME="/data/home" \
     CLAUDE_CONFIG_DIR="/data/claude" \
     HASS_SERVER="http://supervisor/core" \
     CLAUDE_CODE_DISABLE_MOUSE="1" \
+    DISABLE_AUTOUPDATER="1" \
     PATH="/data/home/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
     S6_STAGE2_HOOK="/etc/s6-overlay/scripts/enable-check.sh"
 

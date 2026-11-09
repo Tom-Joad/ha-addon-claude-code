@@ -59,6 +59,14 @@ jobs:
       - name: Build the image and test who can reach the terminal
         run: tools/dev/ingress-test.sh
 
+      - name: Unit tests
+        run: tools/dev/unit-test.sh
+
+      # The image from the previous step. Checks that the terminal comes up
+      # whatever the init commands, packages and settings.json contain.
+      - name: Test the start-up with hostile options
+        run: tools/dev/startup-test.sh
+
       # gitleaks-action refuses the release event ("not yet supported"); the
       # released commit was scanned on its pull request and on main.
       - name: Scan for secrets

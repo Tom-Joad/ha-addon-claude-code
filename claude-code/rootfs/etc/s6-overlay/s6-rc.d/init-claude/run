@@ -118,9 +118,8 @@ resolve_channel() {
 
     resolved=$(curl -fsSL --retry 3 --retry-delay 5 --max-time 60 \
         "${RELEASES_URL}/${channel}" 2>/dev/null) || return 1
-    [[ "${resolved}" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]] || return 1
 
-    printf '%s' "${resolved}"
+    parse_channel_version "${resolved}"
 }
 
 setup_claude_binary() {
@@ -129,8 +128,10 @@ setup_claude_binary() {
     target=""
 
     # Caught here rather than by the installer, which would reject it with a
-    # usage message only after fetching itself.
-    if [[ ! "${requested}" =~ ^(latest|stable|[0-9]+\.[0-9]+\.[0-9]+([-.][^[:space:]]+)?)$ ]]; then
+    # usage message only after fetching itself. A suffix such as -beta.1 is
+    # refused too: the installed version is read back as plain X.Y.Z, so it
+    # would never match and every start would reinstall.
+    if [[ ! "${requested}" =~ ^(latest|stable)$ && ! "${requested}" =~ ${VERSION_PATTERN} ]]; then
         bashio::log.warning \
             "claude_version '${requested}' is not 'latest', 'stable' or an exact" \
             "version such as 2.1.226; using 'latest' instead."
@@ -195,9 +196,9 @@ configure_settings() {
 
     settings="{}"
     if bashio::fs.file_exists "${SETTINGS_FILE}"; then
-        if ! settings=$(jq '.' "${SETTINGS_FILE}" 2>/dev/null); then
+        if ! settings=$(read_settings_json "${SETTINGS_FILE}"); then
             bashio::log.warning \
-                "${SETTINGS_FILE} is not valid JSON; leaving it untouched."
+                "${SETTINGS_FILE} is not a JSON object; leaving it untouched."
             return 0
         fi
     fi
@@ -241,6 +242,13 @@ configure_settings() {
                 | jq 'del(.remoteControlAtStartup) | del(.disableRemoteControl)')
             ;;
     esac
+
+    # Never write back anything but an object: an empty result would wipe the
+    # file and the add-on's settings with it.
+    if ! printf '%s' "${updated}" | jq -e 'type == "object"' > /dev/null 2>&1; then
+        bashio::log.warning 'Updated settings.json is not valid, leaving it untouched.'
+        return 0
+    fi
 
     if ! { printf '%s\n' "${updated}" > "${SETTINGS_FILE}.tmp" \
         && mv "${SETTINGS_FILE}.tmp" "${SETTINGS_FILE}"; }; then

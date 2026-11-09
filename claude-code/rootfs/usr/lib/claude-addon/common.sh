@@ -29,3 +29,37 @@ remote_control_mode() {
 
     printf '%s' "${mode}"
 }
+
+# Both the version the add-on wants and the one it finds installed are compared
+# as plain strings, so both have to be cut the same way: exactly X.Y.Z. A suffix
+# such as -beta.1 or a stray "\r" on one side only means the two never match,
+# and every start reinstalls roughly 300 MB.
+readonly VERSION_PATTERN='^[0-9]+\.[0-9]+\.[0-9]+$'
+
+# Prints the version a release channel answered with, or fails when the answer
+# is anything other than a plain X.Y.Z (plus a line ending).
+parse_channel_version() {
+    local answer="${1}"
+
+    answer="${answer%$'\n'}"
+    answer="${answer%$'\r'}"
+    [[ "${answer}" =~ ${VERSION_PATTERN} ]] || return 1
+
+    printf '%s' "${answer}"
+}
+
+# Prints the settings file's content as one compact JSON object. A file without
+# content (a full disk or a power cut can leave one) counts as {}; anything that
+# is not a JSON object fails. Without the check "jq ." accepts an empty file and
+# prints nothing, and every later step then writes an empty file back.
+read_settings_json() {
+    local file="${1}" content
+
+    content=$(<"${file}") || return 1
+    if [[ -z "${content//[[:space:]]/}" ]]; then
+        printf '{}'
+        return 0
+    fi
+
+    printf '%s' "${content}" | jq -ec 'select(type == "object")'
+}
