@@ -31,7 +31,10 @@ body:
     id: log
     attributes:
       label: Add-on log
-      description: From the add-on's Log tab, around the problem; `log_level` debug gives more. Redacted.
+      description: |
+        From the add-on's Log tab: the lines at the top (add-on version and
+        start-up messages) and the lines around the problem, redacted.
+        `log_level` debug gives more.
       render: text
   - type: textarea
     id: options
