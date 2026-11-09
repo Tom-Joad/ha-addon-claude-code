@@ -8,6 +8,27 @@ with a new major version, and its entry says what to do.
 ## [Unreleased]
 
 ### Fixed
+- An init command that uses an unset variable, calls `exit` or overwrites a
+  loop variable no longer stops the add-on from starting. Each command runs in
+  its own shell; a failing one is logged with its exit code and the next one
+  runs.
+- Init commands are no longer written to the log. Only their position is
+  logged (`init command 2 of 3`), so a token inside a command stays out of the
+  log, diagnostics and bug reports.
+- `packages` entries are installed one by one as written. An entry that starts
+  with `-` or contains a space is skipped with a warning instead of reaching
+  `apk` as an option or being split in two.
+- A pinned `claude_version` or `stable` now holds in every `remote_control`
+  mode. Claude Code's own updater is switched off everywhere, so it no longer
+  moves the version during a session and triggers a 300 MB download at the next
+  start.
+- `claude_version` with a suffix (`2.1.226-beta.1`) is refused with a warning
+  and treated as `latest`. It never matched the installed version, so every
+  start downloaded Claude Code again. A release channel's answer is only used
+  when it is a plain version.
+- An empty `settings.json` is treated as `{}`, so the add-on's settings
+  (transcript retention, memory folder, Remote Control) are applied again.
+  A file that isn't a JSON object is still left untouched.
 - Stopping or updating the add-on with `remote_control: server` no longer waits
   for the restart delay of the Remote Control service. It used to run into the
   Supervisor's stop timeout and end in a SIGKILL; a stop now takes a few

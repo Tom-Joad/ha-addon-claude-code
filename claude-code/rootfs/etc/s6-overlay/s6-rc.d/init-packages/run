@@ -18,8 +18,22 @@ if ! apk update; then
     exit 0
 fi
 
-for package in $(bashio::config 'packages'); do
+# One package per list entry, read into an array: word splitting and globbing
+# would turn "py3-*" into folder names, split an entry with a space in two, and
+# let an entry such as --allow-untrusted reach apk as an option.
+mapfile -t packages < <(bashio::config 'packages | .[]')
+
+for package in "${packages[@]}"; do
+    [[ -n "${package}" ]] || continue
+
+    if [[ "${package}" == -* || "${package}" =~ [[:space:]] ]]; then
+        bashio::log.warning \
+            "Skipping package entry '${package}': an entry must be one package" \
+            "name and must not start with '-'."
+        continue
+    fi
+
     bashio::log.info "Installing package ${package}..."
-    apk add "${package}" \
+    apk add -- "${package}" \
         || bashio::log.warning "Failed installing package ${package}"
 done

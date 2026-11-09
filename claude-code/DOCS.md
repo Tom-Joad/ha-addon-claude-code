@@ -62,13 +62,16 @@ is why the default here is lower than Claude Code's own default of 30 days.
 
 ### Option: `claude_version`
 
-`latest`, `stable`, or an exact version such as `2.1.226`. Anything else is
-reported in the log and treated as `latest`.
+`latest`, `stable`, or an exact version such as `2.1.226`. Anything else,
+including a version with a suffix such as `2.1.226-beta.1`, is reported in the
+log and treated as `latest`.
 
 Both channels are resolved to a concrete version at startup, so the add-on can
 tell an up-to-date install from one that needs replacing without downloading
 anything to find out. Following a channel therefore picks up new releases, and
-pinning an exact version holds it there.
+pinning an exact version holds it there. Claude Code's own updater is switched
+off in every `remote_control` mode (`DISABLE_AUTOUPDATER`), so only the add-on
+changes the version, and only at start.
 
 After an update only the build in use is kept. Each one is close to 300 MB, and
 nothing else removes the one it replaced, so a handful of updates would
@@ -128,6 +131,15 @@ connection comes back by itself.
 Extra Alpine packages and shell commands to run at startup. Failures in either
 are logged but do not stop the add-on: a typo in an init command should not cost
 you the terminal you would fix it from.
+
+Each entry of `packages` is one package name. An entry that starts with `-` or
+contains a space is skipped with a warning.
+
+Each init command runs in its own `bash`, so an unset variable or an `exit`
+ends only that command. The log names a command by its position (`init command
+2 of 3`) and shows the exit code of a failing one, never the command itself, so
+a credential inside it stays out of the log. What a command prints is still
+logged.
 
 ## Where state is kept
 
