@@ -11,6 +11,9 @@ export HOME="${HOME:-/data/home}"
 export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-/data/claude}"
 export HASS_SERVER="${HASS_SERVER:-http://supervisor/core}"
 export CLAUDE_CODE_DISABLE_MOUSE="${CLAUDE_CODE_DISABLE_MOUSE:-1}"
+# The add-on updates Claude Code itself (claude_version); the built-in updater
+# would move a pinned version on in every Remote Control mode.
+export DISABLE_AUTOUPDATER=1
 
 case ":${PATH}:" in
     *":${HOME}/.local/bin:"*) ;;
