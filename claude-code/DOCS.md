@@ -79,6 +79,11 @@ add-on image. It is downloaded into `/data` on first start and only replaced
 when the version actually changes. The image stays small, updates need no
 rebuild, and an add-on update does not rewrite 300 MB to the disk.
 
+The binary comes from Anthropic (`downloads.claude.ai`, installer from
+`claude.ai/install.sh`) and is checked only by TLS; it runs with the add-on's
+rights (see `SECURITY.md`). The add-on image itself is signed, but what is
+downloaded at start is not part of that signature.
+
 If the download fails while a working binary is already present — a slow or
 failed-over uplink, for instance — the add-on logs a warning and starts with the
 version it has, rather than refusing to come up.

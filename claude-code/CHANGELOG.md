@@ -5,6 +5,22 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
+## [Unreleased]
+
+### Fixed
+- Stopping or updating the add-on with `remote_control: server` no longer waits
+  for the restart delay of the Remote Control service. It used to run into the
+  Supervisor's stop timeout and end in a SIGKILL; a stop now takes a few
+  seconds.
+
+### Security
+- The `ha` CLI downloaded while building the image is checked against its
+  SHA-256.
+
+### Docs
+- `SECURITY.md` and `DOCS.md` say that the Claude Code binary is downloaded at
+  start, is not covered by the image signature and runs with the add-on's rights.
+
 ## 1.0.6 - 2026-11-03
 
 ### Changed
