@@ -5,7 +5,7 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
-## [Unreleased]
+## 1.0.7 - 2026-11-10
 
 ### Fixed
 - An init command that uses an unset variable, calls `exit` or overwrites a
@@ -47,6 +47,10 @@ with a new major version, and its entry says what to do.
 ### Docs
 - `SECURITY.md` and `DOCS.md` say that the Claude Code binary is downloaded at
   start, is not covered by the image signature and runs with the add-on's rights.
+
+### Changed
+- Updated dependencies:
+  - hassio-addons/base from 21.0.10 to 21.0.11 in /claude-code
 
 ## 1.0.6 - 2026-11-03
 
