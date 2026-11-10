@@ -82,14 +82,19 @@ add-on image. It is downloaded into `/data` on first start and only replaced
 when the version actually changes. The image stays small, updates need no
 rebuild, and an add-on update does not rewrite 300 MB to the disk.
 
-The binary comes from Anthropic (`downloads.claude.ai`, installer from
-`claude.ai/install.sh`) and is checked only by TLS; it runs with the add-on's
-rights (see `SECURITY.md`). The add-on image itself is signed, but what is
-downloaded at start is not part of that signature.
+The binary comes from Anthropic (`downloads.claude.ai`). Before the add-on
+switches to a newly downloaded build, it compares the build's SHA-256 with the
+checksum in Anthropic's release manifest for that version and your platform. If
+they differ, the build is discarded, the log shows an `ERROR` with the expected
+and the actual checksum, and the add-on keeps the build it had; with none
+installed it doesn't start. The checksum comes from the same host over TLS, so
+it is no signature (see `SECURITY.md`), and the binary runs with the add-on's
+rights. The add-on image itself is signed, but what is downloaded at start is
+not part of that signature.
 
-If the download fails while a working binary is already present — a slow or
-failed-over uplink, for instance — the add-on logs a warning and starts with the
-version it has, rather than refusing to come up.
+If the download fails, or its checksum doesn't match, while a working binary is
+already present — a slow or failed-over uplink, for instance — the add-on logs
+a warning and starts with the version it has, rather than refusing to come up.
 
 ### Option: `remote_control`
 

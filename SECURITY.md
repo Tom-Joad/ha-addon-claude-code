@@ -38,14 +38,24 @@ checked during the build.
 
 **What the signature does not cover:** the Claude Code binary. At every
 add-on start the add-on reads the version of the chosen channel from
-`downloads.claude.ai`, and when it differs from the installed one it runs
-Anthropic's installer (`https://claude.ai/install.sh`) or `claude install`,
-which download the binary from Anthropic. Only TLS protects that download; the
-add-on doesn't verify a checksum or signature. What it installs runs with the
-add-on's rights: as root, with the Supervisor token, write access to `/config`,
-`/backup` and the add-on configurations. Pin `claude_version` to an exact
-version to limit it to a release you chose; the download still happens when
-that version isn't installed yet.
+`downloads.claude.ai`, and when it differs from the installed one it downloads
+that version's binary from the same place. Before the launcher moves to it, the
+add-on compares the binary's SHA-256 with the checksum in Anthropic's release
+manifest (`manifest.json` of that version, the same source Anthropic's own
+installer uses). A build that doesn't match is deleted, the log says `ERROR`
+with the expected and the actual checksum, and the add-on keeps the previous
+build (or, with none installed, doesn't start). The add-on no longer runs
+Anthropic's installer script or `claude install` for this.
+
+That check has limits. The manifest comes from the same host as the binary,
+over TLS, so it catches a corrupt or truncated download and a binary replaced
+without its manifest, not a compromise of Anthropic's download service itself:
+it is a checksum, not a signature. A build that is already installed isn't
+checked again at start. What it installs runs with the add-on's rights: as
+root, with the Supervisor token, write access to `/config`, `/backup` and the
+add-on configurations. Pin `claude_version` to an exact version to limit it to
+a release you chose; the download still happens when that version isn't
+installed yet.
 
 Home Assistant's builder signs each image and the multi-arch manifest with
 cosign, keyless through GitHub's OIDC token. To check the image your

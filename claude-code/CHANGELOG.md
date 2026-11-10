@@ -37,6 +37,12 @@ with a new major version, and its entry says what to do.
 ### Security
 - The `ha` CLI downloaded while building the image is checked against its
   SHA-256.
+- A Claude Code build is checked against the SHA-256 in Anthropic's release
+  manifest before the add-on switches to it. On a mismatch the download is
+  deleted, the log shows an `ERROR` with the expected and the actual checksum,
+  and the add-on keeps the previous build (or doesn't start when there is
+  none). The add-on downloads the build itself now instead of running
+  Anthropic's installer script or `claude install`.
 
 ### Docs
 - `SECURITY.md` and `DOCS.md` say that the Claude Code binary is downloaded at

@@ -63,3 +63,109 @@ read_settings_json() {
 
     printf '%s' "${content}" | jq -ec 'select(type == "object")'
 }
+
+# ------------------------------------------------------- Claude Code download
+#
+# Anthropic publishes every release as
+#   <releases>/<version>/manifest.json            (platforms.<platform>.checksum)
+#   <releases>/<version>/<platform>/claude        (the binary)
+# and its own installer (claude.ai/install.sh) checks the binary against that
+# SHA-256 before it uses it. The add-on does the same, so a binary that does
+# not match the manifest is never switched to.
+#
+# This only moves the trust to the manifest's host: the checksum is fetched
+# from the same place as the binary, over TLS. It catches a corrupt or
+# truncated download and a binary that was replaced without its manifest; it
+# is not a signature.
+
+# Prints the manifest platform name for a machine (uname -m) and a libc
+# ("musl" or "glibc"), as the official installer names them.
+claude_platform() {
+    local machine="${1}" libc="${2}" arch
+
+    case "${machine}" in
+        x86_64 | amd64) arch="x64" ;;
+        aarch64 | arm64) arch="arm64" ;;
+        *) return 1 ;;
+    esac
+
+    if [[ "${libc}" == "musl" ]]; then
+        printf 'linux-%s-musl' "${arch}"
+    else
+        printf 'linux-%s' "${arch}"
+    fi
+}
+
+# Same musl test as the official installer.
+detect_libc() {
+    if [[ -f /lib/libc.musl-x86_64.so.1 || -f /lib/libc.musl-aarch64.so.1 ]] \
+        || ldd /bin/ls 2>&1 | grep -q musl; then
+        printf 'musl'
+    else
+        printf 'glibc'
+    fi
+}
+
+# Prints the SHA-256 the manifest lists for a platform; fails unless it is 64
+# lower-case hex digits (a missing platform, an error page, a changed format).
+manifest_checksum() {
+    local manifest="${1}" platform="${2}" checksum
+
+    checksum=$(printf '%s' "${manifest}" \
+        | jq -er --arg platform "${platform}" '.platforms[$platform].checksum // empty' \
+            2>/dev/null) || return 1
+    [[ "${checksum}" =~ ^[a-f0-9]{64}$ ]] || return 1
+
+    printf '%s' "${checksum}"
+}
+
+# Downloads one release's binary to <destination> and checks it against the
+# manifest. On failure nothing is left at <destination>.
+#
+#   download_verified_binary <releases-url> <version> <platform> <destination>
+#
+# Returns 0 when the binary matches the manifest, 1 when a download failed,
+# 2 when the manifest has no valid checksum for the platform, 3 when the
+# checksum differs (CLAUDE_EXPECTED_SHA256 and CLAUDE_ACTUAL_SHA256 are set
+# for the caller to log).
+download_verified_binary() {
+    local base="${1}" version="${2}" platform="${3}" destination="${4}"
+    local manifest
+
+    CLAUDE_EXPECTED_SHA256=""
+    CLAUDE_ACTUAL_SHA256=""
+
+    manifest=$(curl -fsSL --retry 3 --retry-delay 5 --max-time 60 \
+        "${base}/${version}/manifest.json" 2>/dev/null) || return 1
+    CLAUDE_EXPECTED_SHA256=$(manifest_checksum "${manifest}" "${platform}") || return 2
+
+    if ! curl -fsSL --retry 3 --retry-delay 5 --max-time 1800 \
+        -o "${destination}" "${base}/${version}/${platform}/claude" 2>/dev/null; then
+        rm -f "${destination}"
+        return 1
+    fi
+
+    CLAUDE_ACTUAL_SHA256=$(sha256sum "${destination}" | cut -d' ' -f1)
+    if [[ "${CLAUDE_ACTUAL_SHA256}" != "${CLAUDE_EXPECTED_SHA256}" ]]; then
+        rm -f "${destination}"
+        return 3
+    fi
+
+    return 0
+}
+
+# Makes a verified binary the one the launcher runs: moved into the versions
+# directory (the same filesystem, so the move is atomic), then the launcher
+# symlink is replaced in one step. The previous build stays untouched until
+# the caller prunes it.
+#
+#   activate_claude_binary <binary> <version> <versions-dir> <launcher>
+activate_claude_binary() {
+    local binary="${1}" version="${2}" versions_dir="${3}" launcher="${4}"
+
+    mkdir -p "$(dirname "${launcher}")" || return 1
+    chmod 755 "${binary}" || return 1
+    mv -f "${binary}" "${versions_dir}/${version}" || return 1
+    ln -sfn "${versions_dir}/${version}" "${launcher}.new" || return 1
+    mv -fT "${launcher}.new" "${launcher}"
+}
