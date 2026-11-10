@@ -21,7 +21,17 @@ is only reachable through Home Assistant's Ingress, behind Home Assistant's
 own login, and opens no port of its own. Inside the Supervisor's network,
 ttyd listens on a socket only, and nginx accepts connections from the
 Ingress proxy (`172.30.32.2`) and nothing else, so other add-ons can't reach
-the terminal (since 0.1.7; `tools/dev/ingress-test.sh` checks it). Of particular interest:
+the terminal (since 0.1.7; `tools/dev/ingress-test.sh` checks it).
+
+ttyd runs without `--check-origin`, and nginx passes the `Host` header on
+unchanged. A web page on another site can't open the terminal's WebSocket
+today because Home Assistant's Ingress session cookie isn't sent cross-site;
+that cookie is the only barrier. If browsers or Home Assistant ever relaxed
+it, a page that knows the Ingress path could reach the terminal. Turning on
+`--check-origin` needs a test on a real Home Assistant first (which `Origin`
+and `Host` the Ingress proxy passes on), tracked in issue #47.
+
+Of particular interest:
 
 - a way to reach the terminal without a Home Assistant login
 - the Supervisor token, your Claude login or Home Assistant secrets ending
