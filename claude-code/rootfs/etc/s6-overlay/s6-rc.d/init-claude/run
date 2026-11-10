@@ -9,8 +9,10 @@ readonly HOME_DIR="/data/home"
 readonly MEMORY_DIR="${CONFIG_DIR}/memory"
 readonly PROJECTS_DIR="${CONFIG_DIR}/projects"
 readonly SETTINGS_FILE="${CONFIG_DIR}/settings.json"
-readonly RELEASES_URL="https://downloads.claude.ai/claude-code-releases"
-readonly INSTALLER_URL="https://claude.ai/install.sh"
+# CLAUDE_RELEASES_URL exists for the test suite (a local server with fake
+# releases); the Supervisor never sets it.
+readonly RELEASES_URL="${CLAUDE_RELEASES_URL:-https://downloads.claude.ai/claude-code-releases}"
+readonly LAUNCHER="/data/home/.local/bin/claude"
 readonly VERSIONS_DIR="/data/home/.local/share/claude/versions"
 readonly S6_ENV="/run/s6/container_environment"
 readonly BASELINE_HOOK="/usr/bin/claude-memory-baseline check"
@@ -60,7 +62,7 @@ prune_old_versions() {
 
     [[ -d "${VERSIONS_DIR}" ]] || return 0
 
-    active=$(readlink -f "${HOME_DIR}/.local/bin/claude" 2>/dev/null) || return 0
+    active=$(readlink -f "${LAUNCHER}" 2>/dev/null) || return 0
     bashio::var.has_value "${active}" || return 0
 
     for file in "${VERSIONS_DIR}"/*; do
@@ -76,35 +78,51 @@ prune_old_versions() {
     return 0
 }
 
-# Two paths on purpose. Without a binary the official installer bootstraps one.
-# With a binary already present that installer is the wrong tool twice over: it
-# downloads its own copy of the newest build before doing anything, and it calls
-# "claude install" without --force, which sees an existing installation and
-# leaves the launcher pointing at the old build. The version then never changes,
-# so every start downloads 300 MB and concludes it still has to update.
+# Installed here, not by Anthropic's installer or `claude install`: both fetch
+# the binary they install themselves, with no check this add-on can see. The
+# add-on downloads the exact version, compares its SHA-256 with the one in
+# Anthropic's release manifest, and only then points the launcher at it. A
+# build that does not match is deleted and the launcher stays where it was.
 install_claude() {
-    local requested="${1}"
-    local installer
-    local result=0
+    local version="${1}"
+    local platform partial status=0
 
-    if command -v claude > /dev/null 2>&1; then
-        HOME="${HOME_DIR}" claude install --force "${requested}" || return 1
-        return 0
-    fi
-
-    installer=$(mktemp) || return 1
-
-    # Downloaded to a file rather than piped straight into bash: a piped curl
-    # that fails hands bash an empty script, which then "succeeds".
-    if ! curl -fsSL --retry 3 --retry-delay 5 --max-time 120 \
-        -o "${installer}" "${INSTALLER_URL}"; then
-        rm -f "${installer}"
+    if ! platform=$(claude_platform "$(uname -m)" "$(detect_libc)"); then
+        bashio::log.error "Unsupported architecture $(uname -m)."
         return 1
     fi
 
-    HOME="${HOME_DIR}" bash "${installer}" "${requested}" || result=1
-    rm -f "${installer}"
-    return "${result}"
+    mkdir -p "${VERSIONS_DIR}" || return 1
+    # Left behind by a download that was killed half way.
+    rm -f "${VERSIONS_DIR}"/.download-*
+    partial="${VERSIONS_DIR}/.download-${version}"
+
+    download_verified_binary "${RELEASES_URL}" "${version}" "${platform}" "${partial}" \
+        || status=$?
+
+    case "${status}" in
+        0) ;;
+        2)
+            bashio::log.error \
+                "The release manifest for ${version} has no valid checksum for ${platform}."
+            return 1
+            ;;
+        3)
+            bashio::log.error \
+                "Checksum mismatch for Claude Code ${version} (${platform}):" \
+                "expected ${CLAUDE_EXPECTED_SHA256}, got ${CLAUDE_ACTUAL_SHA256}." \
+                "The download was discarded."
+            return 1
+            ;;
+        *)
+            bashio::log.error "Downloading Claude Code ${version} (${platform}) failed."
+            return 1
+            ;;
+    esac
+
+    bashio::log.info "Checksum of Claude Code ${version} (${platform}) matches the release manifest."
+    activate_claude_binary "${partial}" "${version}" "${VERSIONS_DIR}" "${LAUNCHER}" \
+        || { rm -f "${partial}"; return 1; }
 }
 
 # Both channels publish the version they currently point at, so a channel can be
@@ -159,7 +177,10 @@ setup_claude_binary() {
         bashio::log.info 'Installing Claude Code...'
     fi
 
-    if install_claude "${requested}"; then
+    if ! bashio::var.has_value "${target}"; then
+        bashio::log.error \
+            "Cannot install Claude Code: the version to verify is unknown."
+    elif install_claude "${target}"; then
         current=$(installed_version) || current="unknown"
 
         # Guards against a silent no-op: if the launcher still points at the old
