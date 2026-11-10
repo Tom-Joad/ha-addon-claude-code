@@ -163,7 +163,7 @@ download_verified_binary() {
 activate_claude_binary() {
     local binary="${1}" version="${2}" versions_dir="${3}" launcher="${4}"
 
-    mkdir -p "${versions_dir}" "$(dirname "${launcher}")" || return 1
+    mkdir -p "$(dirname "${launcher}")" || return 1
     chmod 755 "${binary}" || return 1
     mv -f "${binary}" "${versions_dir}/${version}" || return 1
     ln -sfn "${versions_dir}/${version}" "${launcher}.new" || return 1

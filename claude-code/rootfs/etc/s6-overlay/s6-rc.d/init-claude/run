@@ -12,7 +12,7 @@ readonly SETTINGS_FILE="${CONFIG_DIR}/settings.json"
 # CLAUDE_RELEASES_URL exists for the test suite (a local server with fake
 # releases); the Supervisor never sets it.
 readonly RELEASES_URL="${CLAUDE_RELEASES_URL:-https://downloads.claude.ai/claude-code-releases}"
-readonly LAUNCHER="/data/home/.local/bin/claude"
+readonly LAUNCHER="${HOME_DIR}/.local/bin/claude"
 readonly VERSIONS_DIR="/data/home/.local/share/claude/versions"
 readonly S6_ENV="/run/s6/container_environment"
 readonly BASELINE_HOOK="/usr/bin/claude-memory-baseline check"
@@ -121,8 +121,8 @@ install_claude() {
     esac
 
     bashio::log.info "Checksum of Claude Code ${version} (${platform}) matches the release manifest."
-    activate_claude_binary "${partial}" "${version}" "${VERSIONS_DIR}" "${LAUNCHER}" \
-        || { rm -f "${partial}"; return 1; }
+    # A failure here leaves the partial file; the next start's sweep removes it.
+    activate_claude_binary "${partial}" "${version}" "${VERSIONS_DIR}" "${LAUNCHER}"
 }
 
 # Both channels publish the version they currently point at, so a channel can be
