@@ -67,6 +67,17 @@ jobs:
       - name: Test the start-up with hostile options
         run: tools/dev/startup-test.sh
 
+      # Claude Code's local settings list approved commands, tokens and all.
+      # Deleting the file later is not enough (history, forks), so it must
+      # never reach a commit: checked over the whole history.
+      - name: No Claude Code local settings
+        run: |
+          found=$(git log --all --format= --name-only -- ':(glob)**/.claude/settings.local.json' | sort -u)
+          if [ -n "$found" ]; then
+            echo "::error::Claude Code local settings in the history: $found. Rotate any secret in them, then remove the file from the history."
+            exit 1
+          fi
+
       # gitleaks-action refuses the release event ("not yet supported"); the
       # released commit was scanned on its pull request and on main.
       - name: Scan for secrets
