@@ -5,6 +5,12 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
+## 1.0.8 - 2026-11-11
+
+### Security
+- Security updates of the distribution packages, picked up by rebuilding the image:
+  - `git` 2.54.1-r0 (CVE-2026-105437, CVE-2026-111760, CVE-2026-113408, CVE-2026-114466, CVE-2026-114467, CVE-2026-114469)
+
 ## 1.0.7 - 2026-11-10
 
 ### Fixed
