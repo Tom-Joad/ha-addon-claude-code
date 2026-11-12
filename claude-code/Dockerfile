@@ -123,20 +123,23 @@ RUN \
 # vendor, url and documentation labels are overridden, or the published image
 # would name the base image's maintainer.
 ARG BUILD_ARCH
+# Same text as the description in config.yaml (unit-test.sh compares them).
+ARG ADDON_DESCRIPTION="Claude Code in your browser, for maintaining this Home Assistant installation"
+ARG REPO_URL="https://github.com/Tom-Joad/ha-addon-claude-code"
 
 LABEL \
     io.hass.name="Claude Code" \
-    io.hass.description="Claude Code in your browser, for maintaining this Home Assistant installation" \
+    io.hass.description="${ADDON_DESCRIPTION}" \
     io.hass.arch="${BUILD_ARCH}" \
     io.hass.type="addon" \
     io.hass.version="${BUILD_VERSION}" \
     maintainer="Tom-Joad" \
     org.opencontainers.image.title="Claude Code" \
-    org.opencontainers.image.description="Claude Code in your browser, for maintaining this Home Assistant installation" \
+    org.opencontainers.image.description="${ADDON_DESCRIPTION}" \
     org.opencontainers.image.authors="Tom-Joad" \
     org.opencontainers.image.vendor="Tom-Joad" \
-    org.opencontainers.image.url="https://github.com/Tom-Joad/ha-addon-claude-code" \
-    org.opencontainers.image.documentation="https://github.com/Tom-Joad/ha-addon-claude-code/blob/main/claude-code/DOCS.md" \
-    org.opencontainers.image.source="https://github.com/Tom-Joad/ha-addon-claude-code" \
+    org.opencontainers.image.url="${REPO_URL}" \
+    org.opencontainers.image.documentation="${REPO_URL}/blob/main/claude-code/DOCS.md" \
+    org.opencontainers.image.source="${REPO_URL}" \
     org.opencontainers.image.licenses="MIT" \
     org.opencontainers.image.version="${BUILD_VERSION}"

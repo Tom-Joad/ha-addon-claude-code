@@ -64,9 +64,9 @@ over TLS, so it catches a corrupt or truncated download and a binary replaced
 without its manifest, not a compromise of Anthropic's download service itself:
 it is a checksum, not a signature. A build that is already installed isn't
 checked again at start. What it installs runs with the add-on's rights: as
-root, with the Supervisor token and write access to `/config`. Pin `claude_version` to an exact version to limit it to
-a release you chose; the download still happens when that version isn't
-installed yet.
+root, with the Supervisor token and write access to `/config`. Pin
+`claude_version` to an exact version to limit it to a release you chose; the
+download still happens when that version isn't installed yet.
 
 Home Assistant's builder signs each image and the multi-arch manifest with
 cosign, keyless through GitHub's OIDC token. To check the image your

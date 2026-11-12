@@ -155,6 +155,10 @@ check 'map: /share read only' 'true' "$(mapping share)"
 check 'map: no /backup' '' "$(mapping backup)"
 check 'map: nothing else' '3' "$(yq -r '.map | length' claude-code/config.yaml)"
 
+check 'labels: Dockerfile description matches config.yaml' \
+    "ADDON_DESCRIPTION=\"$(yq -r '.description' claude-code/config.yaml)\"" \
+    "$(grep -oP '^ARG \KADDON_DESCRIPTION=.*' claude-code/Dockerfile)"
+
 # backup_exclude in config.yaml: the Supervisor matches each pattern against
 # the full path with PurePath.match. The builds and half-done downloads are
 # left out, the launcher and everything else is kept.
