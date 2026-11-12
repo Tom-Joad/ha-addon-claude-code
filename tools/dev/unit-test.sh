@@ -175,5 +175,24 @@ check 'backup: credentials kept' 'no' "$(excluded claude/.credentials.json)"
 check 'backup: memory kept' 'no' "$(excluded claude/memory/versions/x.md)"
 check 'backup: home kept' 'no' "$(excluded home/.bash_history)"
 
+# Every service of the add-on starts after init-log-level, which lowers trace
+# to debug before anything reads the options (s6 dependencies, transitively).
+S6=claude-code/rootfs/etc/s6-overlay/s6-rc.d
+after_log_level() {
+    local service="${1}" dep
+    [[ ${service} == init-log-level ]] && return 0
+    for dep in "${S6}/${service}"/dependencies.d/*; do
+        [[ -e ${dep} ]] || continue
+        after_log_level "$(basename "${dep}")" && return 0
+    done
+    return 1
+}
+for service_dir in "${S6}"/*/; do
+    service=$(basename "${service_dir}")
+    [[ ${service} == init-log-level ]] && continue
+    check "s6: ${service} starts after init-log-level" 'yes' \
+        "$(after_log_level "${service}" && printf yes)"
+done
+
 (( failures == 0 )) || exit 1
 echo "OK"

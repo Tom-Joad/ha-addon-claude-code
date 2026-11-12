@@ -30,6 +30,11 @@ with a new major version, and its entry says what to do.
 - DOCS.md describes `remote_control_name`, the mapped folders and what backups
   leave out.
 
+### Security
+- `log_level: trace` no longer writes the add-on options, init commands
+  included, to the log. The add-on lowers trace to debug at start and says so;
+  a configuration that names trace stays valid.
+
 ## 1.0.7 - 2026-11-10
 
 ### Fixed

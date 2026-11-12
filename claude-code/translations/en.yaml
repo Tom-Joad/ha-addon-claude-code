@@ -4,7 +4,7 @@ configuration:
     name: Log level
     description: >-
       Controls how much the add-on writes to its own log. Leave at info unless
-      you are chasing a startup problem.
+      you are chasing a startup problem. trace logs at debug.
   cleanup_period_days:
     name: Transcript retention (days)
     description: >-

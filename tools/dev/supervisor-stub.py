@@ -54,7 +54,9 @@ class Handler(BaseHTTPRequestHandler):
         if path in ("/addons/self/options/config", "/apps/self/options/config"):
             self._send(options())
         elif path in ("/addons/self/info", "/apps/self/info"):
-            self._send(INFO)
+            # The real Supervisor includes the options when an add-on asks
+            # for its own info; bashio logs this response at debug.
+            self._send({**INFO, "options": options()})
         elif path == "/info":
             self._send({"supervisor": "2026.07.5", "homeassistant": "2026.8.1",
                         "arch": "amd64", "machine": "qemux86-64"})

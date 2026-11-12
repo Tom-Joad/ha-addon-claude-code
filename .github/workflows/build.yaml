@@ -2,21 +2,13 @@
 name: Build
 
 # yamllint disable-line rule:truthy
+# No paths filter: the secret scan and the check for Claude Code's local
+# settings file have to see every change, documentation and .github/ included.
 on:
   push:
     branches:
       - main
-    paths:
-      - "claude-code/**"
-      - "tools/dev/**"
-      - ".github/workflows/build.yaml"
-      - ".github/dependabot.yml"
   pull_request:
-    paths:
-      - "claude-code/**"
-      - "tools/dev/**"
-      - ".github/workflows/build.yaml"
-      - ".github/dependabot.yml"
   release:
     types:
       - published
@@ -54,9 +46,29 @@ jobs:
             claude-code/rootfs/etc/s6-overlay/scripts/enable-check.sh \
             claude-code/rootfs/usr/bin/claude-session claude-code/rootfs/usr/bin/claude-memory-baseline
 
+      # The release workflow tags the newest dated changelog entry, and the
+      # Supervisor pulls the version in config.yaml: both must name the same
+      # version. HEADING is the release workflow's own definition of "released".
+      - name: Changelog matches config.yaml
+        run: |
+          config_version=$(yq -r '.version' claude-code/config.yaml)
+          changelog_version=$(python3 -c 'import sys; sys.path.insert(0, ".github/scripts")
+          from security_watch import HEADING
+          m = HEADING.search(open("claude-code/CHANGELOG.md", encoding="utf-8").read())
+          print(m.group(1) if m else "")')
+          if [[ "${changelog_version}" != "${config_version}" ]]; then
+            echo "::error::The newest released version in claude-code/CHANGELOG.md is" \
+                 "'${changelog_version}', claude-code/config.yaml has ${config_version}"
+            exit 1
+          fi
+
       # The terminal is a root shell with the Supervisor token: check on every
       # change that only Home Assistant's Ingress proxy can reach it.
+      # Skipped on the release: the commit passed it on its pull request and
+      # on main, and a download failure here must not leave the version that
+      # config.yaml already offers without an image.
       - name: Build the image and test who can reach the terminal
+        if: github.event_name != 'release'
         run: tools/dev/ingress-test.sh
 
       - name: Unit tests
@@ -65,6 +77,7 @@ jobs:
       # The image from the previous step. Checks that the terminal comes up
       # whatever the init commands, packages and settings.json contain.
       - name: Test the start-up with hostile options
+        if: github.event_name != 'release'
         run: tools/dev/startup-test.sh
 
       # Claude Code's local settings list approved commands, tokens and all.
