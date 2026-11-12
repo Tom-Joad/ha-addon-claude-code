@@ -46,14 +46,16 @@ jobs:
             claude-code/rootfs/etc/s6-overlay/scripts/enable-check.sh \
             claude-code/rootfs/usr/bin/claude-session claude-code/rootfs/usr/bin/claude-memory-baseline
 
-      # The release workflow reads the release notes from the newest dated
-      # changelog entry, and the Supervisor pulls the version in config.yaml:
-      # the two have to name the same version.
+      # The release workflow tags the newest dated changelog entry, and the
+      # Supervisor pulls the version in config.yaml: both must name the same
+      # version. HEADING is the release workflow's own definition of "released".
       - name: Changelog matches config.yaml
         run: |
           config_version=$(yq -r '.version' claude-code/config.yaml)
-          changelog_version=$(grep -m1 -oP '^## \[?\K[0-9]+\.[0-9]+\.[0-9]+(?=\]? - [0-9]{4}-[0-9]{2}-[0-9]{2}\s*$)' \
-            claude-code/CHANGELOG.md || true)
+          changelog_version=$(python3 -c 'import sys; sys.path.insert(0, ".github/scripts")
+          from security_watch import HEADING
+          m = HEADING.search(open("claude-code/CHANGELOG.md", encoding="utf-8").read())
+          print(m.group(1) if m else "")')
           if [[ "${changelog_version}" != "${config_version}" ]]; then
             echo "::error::The newest released version in claude-code/CHANGELOG.md is" \
                  "'${changelog_version}', claude-code/config.yaml has ${config_version}"
@@ -62,13 +64,9 @@ jobs:
 
       # The terminal is a root shell with the Supervisor token: check on every
       # change that only Home Assistant's Ingress proxy can reach it.
-      #
-      # The released version is already in config.yaml on main, so the
-      # Supervisor offers the update before the image exists. The release
-      # build must therefore not wait on steps that download half a gigabyte
-      # (Claude Code twice, the base image, Alpine packages): one network
-      # hiccup there left 0.1.8 without an image. The released commit passed
-      # them on its pull request and on main; on the release they are skipped.
+      # Skipped on the release: the commit passed it on its pull request and
+      # on main, and a download failure here must not leave the version that
+      # config.yaml already offers without an image.
       - name: Build the image and test who can reach the terminal
         if: github.event_name != 'release'
         run: tools/dev/ingress-test.sh

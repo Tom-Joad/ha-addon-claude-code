@@ -6,17 +6,12 @@
 # ==============================================================================
 readonly LEVEL_FILE="/run/s6/container_environment/LOG_LEVEL"
 
-# At trace, bashio logs every bashio::config call together with the complete
-# add-on options it reads them from: every init command, verbatim, in every
-# service. Init commands may carry credentials, and the add-on log is shown in
-# the UI, included in diagnostics and pasted into bug reports. The base image
-# has just written the configured level to the s6 environment; every service
-# after this one reads it from there. Lowering it here, before any of them
-# starts, keeps trace from ever taking effect. Nothing in this script reads the
-# options, so nothing here logs them either.
-#
-# trace stays in the schema: removing it would make a saved configuration that
-# still names it invalid, and the add-on would refuse to start after an update.
+# At trace, bashio logs the complete options, init commands and any credential
+# in them included, with every bashio::config call. The base image has just
+# written the level to the s6 environment, which every later service reads:
+# lowering it here keeps trace from taking effect. (Every other service depends
+# on this one; tools/dev/unit-test.sh checks that.) trace stays in the schema,
+# so a saved configuration that names it stays valid.
 declare level
 level=$(cat "${LEVEL_FILE}" 2>/dev/null) || exit 0
 

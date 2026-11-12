@@ -116,5 +116,24 @@ check 'activate: new build is executable' 'yes' "$([[ -x "${VERS}/1.0.0" ]] && p
 check 'activate: previous build is kept' 'old' "$(< "${VERS}/0.9.0")"
 check 'activate: no download file left' 'gone' "$([[ -e "${VERS}/.download-1.0.0" ]] || printf gone)"
 
+# Every service of the add-on starts after init-log-level, which lowers trace
+# to debug before anything reads the options (s6 dependencies, transitively).
+S6=claude-code/rootfs/etc/s6-overlay/s6-rc.d
+after_log_level() {
+    local service="${1}" dep
+    [[ ${service} == init-log-level ]] && return 0
+    for dep in "${S6}/${service}"/dependencies.d/*; do
+        [[ -e ${dep} ]] || continue
+        after_log_level "$(basename "${dep}")" && return 0
+    done
+    return 1
+}
+for service_dir in "${S6}"/*/; do
+    service=$(basename "${service_dir}")
+    [[ ${service} == init-log-level ]] && continue
+    check "s6: ${service} starts after init-log-level" 'yes' \
+        "$(after_log_level "${service}" && printf yes)"
+done
+
 (( failures == 0 )) || exit 1
 echo "OK"

@@ -28,9 +28,7 @@ PORT=8098
 WORK=$(mktemp -d)
 
 cleanup() {
-    docker rm -f "${NET}-addon" "${NET}-stub" "${NET}-releases" \
-        "${NET}-fa" "${NET}-fas" "${NET}-fb" "${NET}-fbs" "${NET}-fc" "${NET}-fcs" \
-        "${NET}-fd" "${NET}-fds" "${NET}-fe" "${NET}-fes" > /dev/null 2>&1 || true
+    docker ps -aq --filter "name=^${NET}-" | xargs -r docker rm -f > /dev/null 2>&1 || true
     docker network rm "${NET}" > /dev/null 2>&1 || true
     # The add-on writes /data as root; remove it through a container.
     docker run --rm --entrypoint sh -v "${WORK}:/w" "${IMAGE}" -c 'rm -rf /w/*' > /dev/null 2>&1 || true
@@ -240,21 +238,19 @@ echo "ok: a mismatch without a previous build stops the start"
 # at debug, every Supervisor API response, and the add-on info carries the
 # options too (the stub includes them, as the real Supervisor does). Neither
 # may put an init command into the log.
-start_fake fd 3.0.0 3.0.0 debug
-wait_for fd 'Starting the ttyd daemon' || { log_of fd >&2; fail 'debug: ttyd never started'; }
-out=$(log_of fd)
-grep -q 'Log level is set to DEBUG' <<<"${out}" || fail 'debug: the log level was not applied'
-! grep -q 'ghp_SECRET_TOKEN_VALUE' <<<"${out}" || fail 'debug: an init command appears in the log'
-stop_fake fd
-echo "ok: debug keeps init commands out of the log"
-
-start_fake fe 3.0.0 3.0.0 trace
-wait_for fe 'Starting the ttyd daemon' || { log_of fe >&2; fail 'trace: ttyd never started'; }
-out=$(log_of fe)
-grep -q 'Logging at debug instead' <<<"${out}" || fail 'trace: not lowered to debug'
-! grep -q 'TRACE:' <<<"${out}" || fail 'trace: trace lines in the log'
-! grep -q 'ghp_SECRET_TOKEN_VALUE' <<<"${out}" || fail 'trace: an init command appears in the log'
-stop_fake fe
-echo "ok: trace is lowered to debug and keeps init commands out of the log"
+for level in debug trace; do
+    start_fake "f${level}" 3.0.0 3.0.0 "${level}"
+    wait_for "f${level}" 'Starting the ttyd daemon' \
+        || { log_of "f${level}" >&2; fail "${level}: ttyd never started"; }
+    out=$(log_of "f${level}")
+    grep -q 'Log level is set to' <<<"${out}" || fail "${level}: the log level was not applied"
+    ! grep -q 'ghp_SECRET_TOKEN_VALUE' <<<"${out}" || fail "${level}: an init command appears in the log"
+    if [[ ${level} == trace ]]; then
+        grep -q 'Logging at debug instead' <<<"${out}" || fail 'trace: not lowered to debug'
+        ! grep -q 'TRACE:' <<<"${out}" || fail 'trace: trace lines in the log'
+    fi
+    stop_fake "f${level}"
+    echo "ok: ${level} keeps init commands out of the log"
+done
 
 echo "OK"
