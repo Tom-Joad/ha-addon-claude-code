@@ -28,12 +28,18 @@ map:
   - type: homeassistant_config
     read_only: false
     path: /config
+  # Read only: Claude may look at other add-ons' configurations and /share,
+  # but the add-on's job is the Home Assistant configuration. No /backup: a
+  # writable mapping let every session read and delete every backup; backups
+  # go through the Supervisor (`ha backups`) instead.
   - type: all_app_configs
-    read_only: false
+    read_only: true
   - type: share
-    read_only: false
-  - type: backup
-    read_only: false
+    read_only: true
+# The Claude Code build (about 330 MB) is downloaded again at the first start
+# after a restore; it would otherwise be part of every add-on backup.
+backup_exclude:
+  - "home/.local/share/claude/versions/*"
 options:
   log_level: info
   cleanup_period_days: 14

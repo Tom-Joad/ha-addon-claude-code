@@ -28,6 +28,7 @@ else
     bashio::var.has_value "${ingress_port}" \
         || bashio::exit.nok 'Could not determine the Ingress port'
     allow="allow 172.30.32.2;"
+    bashio::log.info "Ingress on port ${ingress_port}, for 172.30.32.2 only."
 fi
 
 # Workers run as root: ttyd creates its socket as root, and nothing else in
@@ -66,5 +67,4 @@ http {
 }
 NGINX
 
-bashio::log.info "Ingress on port ${ingress_port}, for 172.30.32.2 only."
 exec nginx -c "${CONFIG}" -g 'daemon off;'

@@ -8,6 +8,11 @@
 #   - package entries that look like apk options or contain spaces are refused;
 #   - an empty settings.json gets the add-on's settings instead of staying empty;
 #   - Claude Code's own auto-updater is off;
+#   - the image carries its own labels, not empty ones or the base image's;
+#   - after a restore (backups leave the build out) the build is downloaded
+#     again;
+#   - remote_control: server starts Remote Control with a session name, also
+#     when remote_control_name is empty;
 #   - a downloaded build is checked against the release manifest's SHA-256
 #     before the launcher moves to it (fake releases served locally: a match
 #     is installed, a mismatch keeps the previous build or stops the start).
@@ -51,6 +56,15 @@ fail() {
 if [[ "${1:-}" == "" ]]; then
     docker build -q -t "${IMAGE}" claude-code > /dev/null
 fi
+
+docker inspect -f '{{json .Config.Labels}}' "${IMAGE}" | jq -e '
+    ."io.hass.name" == "Claude Code" and ."io.hass.description" != ""
+    and ."org.opencontainers.image.title" == "Claude Code"
+    and ."org.opencontainers.image.authors" == "Tom-Joad"
+    and ."org.opencontainers.image.vendor" == "Tom-Joad"
+    and (."org.opencontainers.image.url" | endswith("Tom-Joad/ha-addon-claude-code"))' > /dev/null \
+    || fail "the image labels are empty or the base image's"
+echo "ok: the image carries its own labels"
 
 mkdir -p "${WORK}/data/claude" "${WORK}/config"
 # A settings file a power cut left empty.
@@ -97,6 +111,9 @@ sleep 3
 code=$(docker exec "${NET}-addon" curl -s -o /dev/null -w '%{http_code}' \
     --max-time 5 "http://127.0.0.1:${PORT}/")
 [[ ${code} == 200 ]] || fail "the terminal page answered ${code}, expected 200"
+if in_log 'for 172\.30\.32\.2 only'; then
+    fail 'test mode claims that only 172.30.32.2 may connect'
+fi
 echo "ok: the terminal page is served"
 
 docker exec "${NET}-addon" test -f /tmp/init-reached-the-end \
@@ -142,7 +159,9 @@ REL="${WORK}/releases"
 for v in 1.0.0 2.0.0 3.0.0; do
     for platform in linux-x64-musl linux-arm64-musl; do
         mkdir -p "${REL}/${v}/${platform}"
-        printf '#!/bin/sh\necho "%s (Claude Code)"\n' "${v}" > "${REL}/${v}/${platform}/claude"
+        # Prints how it was called to stderr (the log), for the Remote Control case.
+        printf '#!/bin/sh\necho "claude $*" >&2\necho "%s (Claude Code)"\n' "${v}" \
+            > "${REL}/${v}/${platform}/claude"
     done
     sum=$(sha256sum "${REL}/${v}/linux-x64-musl/claude" | cut -d' ' -f1)
     [[ ${v} != 2.0.0 ]] || sum=$(printf 'b%.0s' $(seq 1 64))
@@ -166,6 +185,8 @@ start_fake() {
         chmod 755 "${data}/home/.local/share/claude/versions/${seeded}"
         ln -s "/data/home/.local/share/claude/versions/${seeded}" "${data}/home/.local/bin/claude"
     fi
+    # FAKE_OPTIONS replaces the options above (JSON).
+    [[ -z "${FAKE_OPTIONS:-}" ]] || printf '%s' "${FAKE_OPTIONS}" > "${data}/options.json"
     docker run -d --name "${NET}-${name}s" --network "${NET}" --network-alias supervisor \
         --entrypoint python3 -e "INGRESS_PORT=${PORT}" \
         -v "${PWD}/tools/dev:/tools:ro" -v "${data}:/data" \
@@ -218,6 +239,30 @@ docker exec "${NET}-fb" sh -c 'ls /data/home/.local/share/claude/versions' | gre
     || fail 'mismatch: the rejected download was left behind'
 stop_fake fb
 echo "ok: a mismatch keeps the previous build"
+
+# A restored backup has the launcher but not the build it points at.
+mkdir -p "${WORK}/fr/home/.local/bin"
+ln -s /data/home/.local/share/claude/versions/3.0.0 "${WORK}/fr/home/.local/bin/claude"
+start_fake fr 3.0.0
+wait_for fr 'Starting the ttyd daemon' || { log_of fr >&2; fail 'restore: ttyd never started'; }
+[[ $(docker exec "${NET}-fr" claude --version) == '3.0.0 (Claude Code)' ]] \
+    || fail 'restore: the build was not downloaded again'
+stop_fake fr
+echo "ok: a restore without the build downloads it again"
+
+# Server mode with a blank name: the service starts Remote Control under the
+# default name (the fake claude logs its arguments), and settings.json keeps
+# neither session-mode key.
+mkdir -p "${WORK}/fs/claude"
+printf '{}' > "${WORK}/fs/claude/.credentials.json"
+FAKE_OPTIONS='{"log_level": "info", "claude_version": "3.0.0", "remote_control": "server",
+               "remote_control_name": " "}' start_fake fs 3.0.0 3.0.0
+wait_for fs 'claude remote-control --spawn same-dir --name Home Assistant$' \
+    || { log_of fs >&2; fail 'server: Remote Control did not start under the default name'; }
+docker exec "${NET}-fs" jq -e 'has("remoteControlAtStartup") or has("disableRemoteControl") | not' \
+    /data/claude/settings.json > /dev/null || fail 'server: settings.json keeps a session-mode key'
+stop_fake fs
+echo "ok: remote_control server starts Remote Control under the default name"
 
 # A mismatch with nothing installed stops the start instead of running it.
 start_fake fc 2.0.0

@@ -17,7 +17,12 @@ if ! bashio::fs.file_exists '/data/claude/.credentials.json'; then
     exit 1
 fi
 
-session_name=$(bashio::config 'remote_control_name' 'Home Assistant')
+readonly DEFAULT_NAME='Home Assistant'
+
+# bashio only falls back to the default for a missing option; an empty or
+# blank name would reach Claude Code as --name "".
+session_name=$(bashio::config 'remote_control_name' "${DEFAULT_NAME}")
+[[ -n "${session_name//[[:space:]]/}" ]] || session_name="${DEFAULT_NAME}"
 
 options+=(--spawn same-dir)
 options+=(--name "${session_name}")

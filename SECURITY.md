@@ -14,8 +14,10 @@ choose **Report a vulnerability**.
 ## Scope notes
 
 The add-on runs Claude Code with write access to your Home Assistant
-configuration, the add-on configurations, `/share` and `/backup`, and with
-the Supervisor's `manager` role. That is its purpose; treat access to the
+configuration, read access to the add-on configurations and `/share`, and
+with the Supervisor's `manager` role. `/backup` is not mapped; the
+`manager` role still lets it create and restore backups through the
+Supervisor. That is its purpose; treat access to the
 **Claude** panel like access to a Home Assistant administrator account. It
 is only reachable through Home Assistant's Ingress, behind Home Assistant's
 own login, and opens no port of its own. Inside the Supervisor's network,
@@ -62,10 +64,9 @@ over TLS, so it catches a corrupt or truncated download and a binary replaced
 without its manifest, not a compromise of Anthropic's download service itself:
 it is a checksum, not a signature. A build that is already installed isn't
 checked again at start. What it installs runs with the add-on's rights: as
-root, with the Supervisor token, write access to `/config`, `/backup` and the
-add-on configurations. Pin `claude_version` to an exact version to limit it to
-a release you chose; the download still happens when that version isn't
-installed yet.
+root, with the Supervisor token and write access to `/config`. Pin
+`claude_version` to an exact version to limit it to a release you chose; the
+download still happens when that version isn't installed yet.
 
 Home Assistant's builder signs each image and the multi-arch manifest with
 cosign, keyless through GitHub's OIDC token. To check the image your

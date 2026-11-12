@@ -53,7 +53,7 @@ ARG BUILD_VERSION
 # dropped first: 1.0.3 kept curl 8.22.0 because of that pin.
 # hadolint ignore=DL3017,DL3018
 RUN \
-    sed -i 's/[=<>~].*$//' /etc/apk/world \
+    sed -i '/^[^.]/s/[=<>~].*$//' /etc/apk/world \
     && apk upgrade --no-cache \
     && apk add --no-cache \
         bash \
@@ -107,7 +107,7 @@ COPY rootfs /
 # name of a service. Hence it is created here instead.
 RUN \
     mkdir -p /etc/s6-overlay/user-bundles.d/user2/contents.d \
-    && echo -n bundle > /etc/s6-overlay/user-bundles.d/user2/type
+    && printf bundle > /etc/s6-overlay/user-bundles.d/user2/type
 
 # Ensure the scripts we ship are executable regardless of how git checked them out
 RUN \
@@ -117,26 +117,29 @@ RUN \
     && find /etc/s6-overlay/s6-rc.d -type f \( -name run -o -name finish -o -name up \) \
         -exec chmod a+x {} +
 
-# Build arguments
+# The HA builder passes only BUILD_ARCH and BUILD_VERSION, and sets the arch,
+# version, created and source labels itself; the revision comes from the
+# workflow. Everything else is written out here. The base image's own authors,
+# vendor, url and documentation labels are overridden, or the published image
+# would name the base image's maintainer.
 ARG BUILD_ARCH
-ARG BUILD_DATE
-ARG BUILD_DESCRIPTION
-ARG BUILD_NAME
-ARG BUILD_REF
-ARG BUILD_REPOSITORY
-ARG BUILD_VERSION
+# Same text as the description in config.yaml (unit-test.sh compares them).
+ARG ADDON_DESCRIPTION="Claude Code in your browser, for maintaining this Home Assistant installation"
+ARG REPO_URL="https://github.com/Tom-Joad/ha-addon-claude-code"
 
-# Labels
 LABEL \
-    io.hass.name="${BUILD_NAME}" \
-    io.hass.description="${BUILD_DESCRIPTION}" \
+    io.hass.name="Claude Code" \
+    io.hass.description="${ADDON_DESCRIPTION}" \
     io.hass.arch="${BUILD_ARCH}" \
     io.hass.type="addon" \
     io.hass.version="${BUILD_VERSION}" \
     maintainer="Tom-Joad" \
-    org.opencontainers.image.title="${BUILD_NAME}" \
-    org.opencontainers.image.description="${BUILD_DESCRIPTION}" \
-    org.opencontainers.image.source="https://github.com/${BUILD_REPOSITORY}" \
-    org.opencontainers.image.created=${BUILD_DATE} \
-    org.opencontainers.image.revision=${BUILD_REF} \
-    org.opencontainers.image.version=${BUILD_VERSION}
+    org.opencontainers.image.title="Claude Code" \
+    org.opencontainers.image.description="${ADDON_DESCRIPTION}" \
+    org.opencontainers.image.authors="Tom-Joad" \
+    org.opencontainers.image.vendor="Tom-Joad" \
+    org.opencontainers.image.url="${REPO_URL}" \
+    org.opencontainers.image.documentation="${REPO_URL}/blob/main/claude-code/DOCS.md" \
+    org.opencontainers.image.source="${REPO_URL}" \
+    org.opencontainers.image.licenses="MIT" \
+    org.opencontainers.image.version="${BUILD_VERSION}"

@@ -30,7 +30,8 @@ configuration:
   remote_control_name:
     name: Remote Control session name
     description: >-
-      The name this machine's session shows up under in the session list.
+      The name this machine's session shows up under in the session list
+      (server mode only). Empty means Home Assistant.
   packages:
     name: Extra packages
     description: >-

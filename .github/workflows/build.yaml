@@ -187,6 +187,9 @@ jobs:
             latest
           push: ${{ needs.init.outputs.push }}
           version: ${{ needs.init.outputs.version }}
+          # The builder sets the other OCI labels; the Dockerfile the fixed ones.
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
 
   manifest:
     name: Publish multi-arch manifest
