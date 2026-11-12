@@ -37,6 +37,10 @@ starts Claude there. Two consequences worth knowing:
   write into `.storage` directly, verify a change after making it. Your file is
   read after the add-on's, so where the two disagree, yours wins.
 
+Besides `/config`, the add-on sees the other add-ons' configurations
+(`/addon_configs`) and `/share`, both read only. `/backup` is not mapped; backups
+go through the Supervisor (`ha backups`), which this add-on may use.
+
 The add-on also gets the Supervisor and Home Assistant APIs, and ships the `ha`
 CLI, which is what makes `ha core check`, Core logs, and the WebSocket API
 reachable from the session. The CLI reads the add-on's Supervisor token by
@@ -131,6 +135,12 @@ own afterwards. If the machine loses network for more than about ten minutes the
 remote session times out and the process exits; the add-on restarts it, so the
 connection comes back by itself.
 
+### Option: `remote_control_name`
+
+The name the `server` session shows up under in the session list on
+claude.ai/code and in the Claude app. Default `Home Assistant`; an empty or
+blank name falls back to it. `disabled` and `session` don't use it.
+
 ### Option: `packages` / `init_commands`
 
 Extra Alpine packages and shell commands to run at startup. Failures in either
@@ -163,6 +173,11 @@ what puts it there.
 
 Note that add-on backups include `/data`, and therefore include your credentials
 and your transcripts. If that is not what you want, exclude them.
+
+The Claude Code build itself (about 330 MB, under
+`/data/home/.local/share/claude/versions`) is left out of backups. After a
+restore the add-on downloads it again at the first start, which needs network
+access then.
 
 ## Session handling
 

@@ -6,6 +6,7 @@
 # ==============================================================================
 declare ingress_port
 declare allow
+declare audience
 readonly CONFIG="/run/ingress-nginx.conf"
 readonly SOCKET="/run/ttyd.sock"
 
@@ -20,6 +21,7 @@ if [[ "${TTYD_BIND_ALL:-0}" == "1" ]]; then
     # and no Ingress proxy at 172.30.32.2. Never reached inside Home Assistant.
     ingress_port="${INGRESS_PORT:-7681}"
     allow="allow all;"
+    audience="open to every address (test mode)"
     bashio::log.warning "Test mode: port ${ingress_port}, open to every address."
 else
     # Home Assistant assigns the Ingress port dynamically. Ingress terminates
@@ -28,6 +30,7 @@ else
     bashio::var.has_value "${ingress_port}" \
         || bashio::exit.nok 'Could not determine the Ingress port'
     allow="allow 172.30.32.2;"
+    audience="for 172.30.32.2 only"
 fi
 
 # Workers run as root: ttyd creates its socket as root, and nothing else in
@@ -66,5 +69,5 @@ http {
 }
 NGINX
 
-bashio::log.info "Ingress on port ${ingress_port}, for 172.30.32.2 only."
+bashio::log.info "Ingress on port ${ingress_port}, ${audience}."
 exec nginx -c "${CONFIG}" -g 'daemon off;'

@@ -5,6 +5,31 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
+## [Unreleased]
+
+### Changed
+- `/backup` is no longer mapped into the add-on, and the add-on configurations
+  (`/addon_configs`) and `/share` are read only. A writable `/backup` let every
+  session read and delete every backup. Backups still work through the
+  Supervisor (`ha backups new`, `ha backups list`). Nothing to do when
+  updating, unless an init command or a habit of yours wrote into one of
+  these folders.
+- Add-on backups leave out the Claude Code build (about 330 MB). After a
+  restore the add-on downloads it again at the first start.
+- The published image carries its own name, description, authors, vendor and
+  URL labels instead of empty ones and those of the base image, and names the
+  commit it was built from.
+
+### Fixed
+- An empty or blank `remote_control_name` no longer starts Remote Control with
+  an empty session name; it falls back to `Home Assistant`.
+- In the local test mode the log no longer claims that only `172.30.32.2` may
+  connect.
+
+### Docs
+- DOCS.md describes `remote_control_name`, the mapped folders and what backups
+  leave out.
+
 ## 1.0.7 - 2026-11-10
 
 ### Fixed

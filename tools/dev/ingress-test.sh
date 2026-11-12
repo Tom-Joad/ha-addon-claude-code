@@ -14,7 +14,6 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/../.."
 
 IMAGE="${1:-claude-addon:test}"
-CURL=curlimages/curl:8.17.0
 NET=claude-ingress-test-$$
 PORT=8099
 WORK=$(mktemp -d)
@@ -61,12 +60,16 @@ for _ in $(seq 1 120); do
     sleep 3
 done
 sleep 3
+logs=$(docker logs "${NET}-addon" 2>&1)
+grep -q "Ingress on port ${PORT}, for 172.30.32.2 only." <<<"${logs}" \
+    || fail 'the log does not say that only 172.30.32.2 is let in'
 
-# from <ip> <curl args...>: one request from a container with that address.
+# from <ip> <curl args...>: one request from a container with that address,
+# made with the curl of the add-on image (no third-party image to pin).
 from() {
     local ip="$1"
     shift
-    docker run --rm --network "${NET}" --ip "${ip}" "${CURL}" \
+    docker run --rm --network "${NET}" --ip "${ip}" --entrypoint curl "${IMAGE}" \
         -s -o /dev/null -w '%{http_code}' --max-time 5 "$@" || true
 }
 URL="http://172.30.32.30:${PORT}"

@@ -116,5 +116,60 @@ check 'activate: new build is executable' 'yes' "$([[ -x "${VERS}/1.0.0" ]] && p
 check 'activate: previous build is kept' 'old' "$(< "${VERS}/0.9.0")"
 check 'activate: no download file left' 'gone' "$([[ -e "${VERS}/.download-1.0.0" ]] || printf gone)"
 
+# claude-memory-baseline: silent without a baseline, reports drift without
+# failing the session start, refuses an empty baseline.
+baseline() {
+    local code=0 out
+    out=$(LC_ALL=C CLAUDE_CONFIG_DIR="${WORK}/cfg" bash claude-code/rootfs/usr/bin/claude-memory-baseline "$@" 2>&1) \
+        || code=$?
+    printf '%s|%s' "${code}" "${out}"
+}
+baseline_code() { local out; out=$(baseline "$@"); printf '%s' "${out%%|*}"; }
+check 'baseline: no argument' '2' "$(baseline_code)"
+check 'baseline: unknown command' '2' "$(baseline_code verify)"
+check 'baseline: check without anything' '0|' "$(baseline check)"
+check 'baseline: update without a memory dir' '1' "$(baseline_code update)"
+mkdir -p "${WORK}/cfg/memory/sub"
+check 'baseline: update of an empty memory dir is refused' '1' "$(baseline_code update)"
+check 'baseline: nothing written for an empty memory dir' 'none' \
+    "$([[ -e "${WORK}/cfg/memory-baseline.sha256" ]] || printf none)"
+printf 'one\n' > "${WORK}/cfg/memory/a.md"
+printf 'two\n' > "${WORK}/cfg/memory/sub/b.md"
+check 'baseline: update' '0|Baseline updated: 2 file(s) in '"${WORK}/cfg/memory" "$(baseline update)"
+check 'baseline: check, unchanged' '0|' "$(baseline check)"
+printf 'changed\n' > "${WORK}/cfg/memory/a.md"
+rm "${WORK}/cfg/memory/sub/b.md"
+out=$(baseline check)
+check 'baseline: drift does not fail the session start' '0' "${out%%|*}"
+check 'baseline: drift names the changed file' 'yes' "$(grep -q '^./a.md: FAILED$' <<<"${out}" && printf yes)"
+check 'baseline: drift names the missing file' 'yes' "$(grep -q 'sub/b.md' <<<"${out}" && printf yes)"
+: > "${WORK}/cfg/memory-baseline.sha256"
+check 'baseline: an empty baseline is no mismatch' '0|' "$(baseline check)"
+
+# Folder mappings in config.yaml: /config writable, the add-on configurations
+# and /share read only, /backup not at all.
+mapping() { yq -r ".map[] | select(.type == \"${1}\") | .read_only" claude-code/config.yaml; }
+check 'map: /config writable' 'false' "$(mapping homeassistant_config)"
+check 'map: add-on configurations read only' 'true' "$(mapping all_app_configs)"
+check 'map: /share read only' 'true' "$(mapping share)"
+check 'map: no /backup' '' "$(mapping backup)"
+check 'map: nothing else' '3' "$(yq -r '.map | length' claude-code/config.yaml)"
+
+# backup_exclude in config.yaml: the Supervisor matches each pattern against
+# the full path with PurePath.match. The builds and half-done downloads are
+# left out, the launcher and everything else is kept.
+mapfile -t excludes < <(yq -r '.backup_exclude[]' claude-code/config.yaml)
+excluded() {
+    python3 -c 'import sys, pathlib
+p = pathlib.PurePath("/data/addons/data/abcd_claude-code/" + sys.argv[1])
+sys.exit(0 if any(p.match(e) for e in sys.argv[2:]) else 1)' "${1}" "${excludes[@]}" && printf yes || printf no
+}
+check 'backup: build excluded' 'yes' "$(excluded home/.local/share/claude/versions/2.1.230)"
+check 'backup: partial download excluded' 'yes' "$(excluded home/.local/share/claude/versions/.download-2.1.230)"
+check 'backup: launcher kept' 'no' "$(excluded home/.local/bin/claude)"
+check 'backup: credentials kept' 'no' "$(excluded claude/.credentials.json)"
+check 'backup: memory kept' 'no' "$(excluded claude/memory/versions/x.md)"
+check 'backup: home kept' 'no' "$(excluded home/.bash_history)"
+
 (( failures == 0 )) || exit 1
 echo "OK"
