@@ -2,21 +2,13 @@
 name: Build
 
 # yamllint disable-line rule:truthy
+# No paths filter: the secret scan and the check for Claude Code's local
+# settings file have to see every change, documentation and .github/ included.
 on:
   push:
     branches:
       - main
-    paths:
-      - "claude-code/**"
-      - "tools/dev/**"
-      - ".github/workflows/build.yaml"
-      - ".github/dependabot.yml"
   pull_request:
-    paths:
-      - "claude-code/**"
-      - "tools/dev/**"
-      - ".github/workflows/build.yaml"
-      - ".github/dependabot.yml"
   release:
     types:
       - published
@@ -54,9 +46,31 @@ jobs:
             claude-code/rootfs/etc/s6-overlay/scripts/enable-check.sh \
             claude-code/rootfs/usr/bin/claude-session claude-code/rootfs/usr/bin/claude-memory-baseline
 
+      # The release workflow reads the release notes from the newest dated
+      # changelog entry, and the Supervisor pulls the version in config.yaml:
+      # the two have to name the same version.
+      - name: Changelog matches config.yaml
+        run: |
+          config_version=$(yq -r '.version' claude-code/config.yaml)
+          changelog_version=$(grep -m1 -oP '^## \[?\K[0-9]+\.[0-9]+\.[0-9]+(?=\]? - [0-9]{4}-[0-9]{2}-[0-9]{2}\s*$)' \
+            claude-code/CHANGELOG.md || true)
+          if [[ "${changelog_version}" != "${config_version}" ]]; then
+            echo "::error::The newest released version in claude-code/CHANGELOG.md is" \
+                 "'${changelog_version}', claude-code/config.yaml has ${config_version}"
+            exit 1
+          fi
+
       # The terminal is a root shell with the Supervisor token: check on every
       # change that only Home Assistant's Ingress proxy can reach it.
+      #
+      # The released version is already in config.yaml on main, so the
+      # Supervisor offers the update before the image exists. The release
+      # build must therefore not wait on steps that download half a gigabyte
+      # (Claude Code twice, the base image, Alpine packages): one network
+      # hiccup there left 0.1.8 without an image. The released commit passed
+      # them on its pull request and on main; on the release they are skipped.
       - name: Build the image and test who can reach the terminal
+        if: github.event_name != 'release'
         run: tools/dev/ingress-test.sh
 
       - name: Unit tests
@@ -65,6 +79,7 @@ jobs:
       # The image from the previous step. Checks that the terminal comes up
       # whatever the init commands, packages and settings.json contain.
       - name: Test the start-up with hostile options
+        if: github.event_name != 'release'
         run: tools/dev/startup-test.sh
 
       # Claude Code's local settings list approved commands, tokens and all.

@@ -3,7 +3,8 @@
 # Checks that the terminal comes up, whatever the user's options contain:
 #   - init commands that use an unset variable, call exit, fail, or overwrite
 #     the loop variable must not stop later commands or ttyd;
-#   - init commands are logged by position, never verbatim;
+#   - init commands are logged by position, never verbatim, also at log level
+#     debug and trace;
 #   - package entries that look like apk options or contain spaces are refused;
 #   - an empty settings.json gets the add-on's settings instead of staying empty;
 #   - Claude Code's own auto-updater is off;
@@ -28,7 +29,8 @@ WORK=$(mktemp -d)
 
 cleanup() {
     docker rm -f "${NET}-addon" "${NET}-stub" "${NET}-releases" \
-        "${NET}-fa" "${NET}-fas" "${NET}-fb" "${NET}-fbs" "${NET}-fc" "${NET}-fcs" > /dev/null 2>&1 || true
+        "${NET}-fa" "${NET}-fas" "${NET}-fb" "${NET}-fbs" "${NET}-fc" "${NET}-fcs" \
+        "${NET}-fd" "${NET}-fds" "${NET}-fe" "${NET}-fes" > /dev/null 2>&1 || true
     docker network rm "${NET}" > /dev/null 2>&1 || true
     # The add-on writes /data as root; remove it through a container.
     docker run --rm --entrypoint sh -v "${WORK}:/w" "${IMAGE}" -c 'rm -rf /w/*' > /dev/null 2>&1 || true
@@ -152,13 +154,15 @@ done
 docker run -d --name "${NET}-releases" --network "${NET}" --network-alias releases \
     --entrypoint python3 -v "${REL}:/srv:ro" "${IMAGE}" -m http.server 8000 -d /srv > /dev/null
 
-# start_fake <name> <claude_version> [seeded-version]: an add-on container on
-# fake releases, optionally with that version already installed.
+# start_fake <name> <claude_version> [seeded-version] [log_level]: an add-on
+# container on fake releases, optionally with that version already installed.
+# Its one init command carries a "credential" that must never reach the log.
 start_fake() {
-    local name="${1}" want="${2}" seeded="${3:-}" data="${WORK}/${1}"
+    local name="${1}" want="${2}" seeded="${3:-}" level="${4:-info}" data="${WORK}/${1}"
     mkdir -p "${data}/claude" "${data}/home/.local/bin" "${data}/home/.local/share/claude/versions"
-    printf '{"log_level": "info", "claude_version": "%s", "remote_control": "disabled"}' \
-        "${want}" > "${data}/options.json"
+    printf '{"log_level": "%s", "claude_version": "%s", "remote_control": "disabled",
+             "init_commands": ["true ghp_SECRET_TOKEN_VALUE"]}' \
+        "${level}" "${want}" > "${data}/options.json"
     if [[ -n "${seeded}" ]]; then
         cp "${REL}/${seeded}/linux-x64-musl/claude" "${data}/home/.local/share/claude/versions/${seeded}"
         chmod 755 "${data}/home/.local/share/claude/versions/${seeded}"
@@ -227,6 +231,30 @@ grep -q 'no previous installation exists' <<<"${out}" || fail 'mismatch without 
 # The container has stopped; its /data is the host directory.
 [[ ! -e "${WORK}/fc/home/.local/bin/claude" && ! -L "${WORK}/fc/home/.local/bin/claude" ]] \
     || fail 'mismatch without a previous build: a launcher exists'
+stop_fake fc
 echo "ok: a mismatch without a previous build stops the start"
+
+# ------------------------------------------------------------- log levels
+#
+# At trace, bashio logs the complete options with every bashio::config call;
+# at debug, every Supervisor API response, and the add-on info carries the
+# options too (the stub includes them, as the real Supervisor does). Neither
+# may put an init command into the log.
+start_fake fd 3.0.0 3.0.0 debug
+wait_for fd 'Starting the ttyd daemon' || { log_of fd >&2; fail 'debug: ttyd never started'; }
+out=$(log_of fd)
+grep -q 'Log level is set to DEBUG' <<<"${out}" || fail 'debug: the log level was not applied'
+! grep -q 'ghp_SECRET_TOKEN_VALUE' <<<"${out}" || fail 'debug: an init command appears in the log'
+stop_fake fd
+echo "ok: debug keeps init commands out of the log"
+
+start_fake fe 3.0.0 3.0.0 trace
+wait_for fe 'Starting the ttyd daemon' || { log_of fe >&2; fail 'trace: ttyd never started'; }
+out=$(log_of fe)
+grep -q 'Logging at debug instead' <<<"${out}" || fail 'trace: not lowered to debug'
+! grep -q 'TRACE:' <<<"${out}" || fail 'trace: trace lines in the log'
+! grep -q 'ghp_SECRET_TOKEN_VALUE' <<<"${out}" || fail 'trace: an init command appears in the log'
+stop_fake fe
+echo "ok: trace is lowered to debug and keeps init commands out of the log"
 
 echo "OK"
