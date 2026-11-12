@@ -5,6 +5,13 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
+## [Unreleased]
+
+### Security
+- `log_level: trace` no longer writes the add-on options, init commands
+  included, to the log. The add-on lowers trace to debug at start and says so;
+  a configuration that names trace stays valid.
+
 ## 1.0.7 - 2026-11-10
 
 ### Fixed

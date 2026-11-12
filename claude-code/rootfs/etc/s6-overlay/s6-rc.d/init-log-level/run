@@ -1,0 +1,23 @@
+#!/command/with-contenv bashio
+# shellcheck shell=bash
+# ==============================================================================
+# Home Assistant Add-on: Claude Code
+# Caps the log level at debug
+# ==============================================================================
+readonly LEVEL_FILE="/run/s6/container_environment/LOG_LEVEL"
+
+# At trace, bashio logs the complete options, init commands and any credential
+# in them included, with every bashio::config call. The base image has just
+# written the level to the s6 environment, which every later service reads:
+# lowering it here keeps trace from taking effect. (Every other service depends
+# on this one; tools/dev/unit-test.sh checks that.) trace stays in the schema,
+# so a saved configuration that names it stays valid.
+declare level
+level=$(cat "${LEVEL_FILE}" 2>/dev/null) || exit 0
+
+if [[ "${level}" =~ ^[0-9]+$ ]] && (( level > __BASHIO_LOG_LEVEL_DEBUG )); then
+    printf '%s' "${__BASHIO_LOG_LEVEL_DEBUG}" > "${LEVEL_FILE}"
+    bashio::log.notice \
+        'Log level trace is not used: it would write the add-on options,' \
+        'init commands included, to the log. Logging at debug instead.'
+fi

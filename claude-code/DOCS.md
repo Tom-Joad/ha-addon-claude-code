@@ -54,6 +54,17 @@ packages: []
 init_commands: []
 ```
 
+### Option: `log_level`
+
+How much the add-on writes to its own log: `debug`, `info` (the default),
+`notice`, `warning`, `error` or `fatal`. Raise it to `debug` while chasing a
+startup problem and set it back afterwards.
+
+`trace` is accepted but logs at `debug`, and the log says so. At `trace` the
+underlying library writes the complete add-on options into the log with every
+option it reads, init commands included, and an init command may carry a
+credential.
+
 ### Option: `cleanup_period_days`
 
 How long session transcripts are kept. They accumulate at roughly 800 KB per
