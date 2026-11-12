@@ -5,7 +5,7 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
-## [1.1.0] - Unreleased
+## 1.1.0 - 2026-11-12
 
 ### Changed
 - `/backup` is no longer mapped into the add-on, and the add-on configurations
@@ -31,6 +31,9 @@ with a new major version, and its entry says what to do.
   leave out.
 
 ### Security
+- Security updates of the distribution packages, picked up by rebuilding the image:
+  - `git-init-template` 2.54.1-r0 (CVE-2026-105437, CVE-2026-111760, CVE-2026-114466)
+  - `git` 2.54.1-r0 (CVE-2026-105437, CVE-2026-111760, CVE-2026-114466)
 - `log_level: trace` no longer writes the add-on options, init commands
   included, to the log. The add-on lowers trace to debug at start and says so;
   a configuration that names trace stays valid.
