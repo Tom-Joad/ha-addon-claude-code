@@ -4,6 +4,9 @@
 # Home Assistant Add-on: Claude Code
 # Runs Claude Code in Remote Control server mode
 # ==============================================================================
+# shellcheck source=../../../../usr/lib/claude-addon/common.sh
+source /usr/lib/claude-addon/common.sh
+
 declare -a options
 declare session_name
 
@@ -34,4 +37,6 @@ cd /config || bashio::exit.nok 'Working directory /config is not available'
 
 bashio::log.info "Starting Remote Control as \"${session_name}\"..."
 
-exec claude remote-control "${options[@]}"
+# exec keeps Claude Code the process s6 supervises and signals; only its
+# standard output takes the detour through the filter.
+exec claude remote-control "${options[@]}" > >(filter_remote_control_output)
