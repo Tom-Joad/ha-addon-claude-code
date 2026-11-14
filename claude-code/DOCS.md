@@ -152,10 +152,8 @@ The name the `server` session shows up under in the session list on
 claude.ai/code and in the Claude app. Default `Home Assistant`; an empty or
 blank name falls back to it. `disabled` and `session` don't use it.
 
-The name only applies to sessions. The machine itself, which you pick as the
-environment on claude.ai/code, is listed under the add-on container's host
-name, for example `b46aad3a-claude-code` (with `config` as its folder). An
-add-on cannot change its host name.
+The name only applies to sessions. The environment you pick on claude.ai/code
+is listed under the name of the folder Remote Control runs in, `config`.
 
 ### Option: `packages` / `init_commands`
 
