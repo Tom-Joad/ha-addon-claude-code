@@ -4,6 +4,9 @@
 # Home Assistant Add-on: Claude Code
 # Runs Claude Code in Remote Control server mode
 # ==============================================================================
+# shellcheck source=../../../../usr/lib/claude-addon/common.sh
+source /usr/lib/claude-addon/common.sh
+
 declare -a options
 declare session_name
 
@@ -26,6 +29,10 @@ session_name=$(bashio::config 'remote_control_name' "${DEFAULT_NAME}")
 
 options+=(--spawn same-dir)
 options+=(--name "${session_name}")
+# --name only covers the session created at start. Sessions opened later from
+# claude.ai get a generated name whose prefix defaults to the host name, which
+# in an add-on is "<repository hash>-claude-code".
+options+=(--remote-control-session-name-prefix "${session_name}")
 bashio::debug && options+=(--verbose)
 
 # same-dir rather than worktree: the configuration directory is not a git
@@ -34,4 +41,6 @@ cd /config || bashio::exit.nok 'Working directory /config is not available'
 
 bashio::log.info "Starting Remote Control as \"${session_name}\"..."
 
-exec claude remote-control "${options[@]}"
+# exec keeps Claude Code the process s6 supervises and signals; only its
+# standard output takes the detour through the filter.
+exec claude remote-control "${options[@]}" > >(filter_remote_control_output)

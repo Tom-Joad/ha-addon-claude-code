@@ -5,6 +5,17 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
+## [Unreleased]
+
+### Fixed
+- In `server` mode the log no longer fills with a new copy of Remote
+  Control's status block every second. The add-on now logs the block only when
+  it changes (connected, a session attached or renamed, reconnecting), and
+  event lines as they come.
+- Sessions opened from claude.ai in `server` mode are named after
+  `remote_control_name` (for example `Home Assistant-lucky-knuth`) instead of
+  the container's host name (`b46aad3a-claude-code-lucky-knuth`).
+
 ## 1.1.0 - 2026-11-12
 
 ### Changed

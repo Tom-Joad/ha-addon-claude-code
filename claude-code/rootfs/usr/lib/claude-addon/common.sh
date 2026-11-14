@@ -169,3 +169,84 @@ activate_claude_binary() {
     ln -sfn "${versions_dir}/${version}" "${launcher}.new" || return 1
     mv -fT "${launcher}.new" "${launcher}"
 }
+
+# claude remote-control redraws its status block about once a second (cursor
+# up, clear, print again) whether or not its output is a terminal. In the
+# add-on log every redraw became a new copy of the block: some fifty lines a
+# minute that said nothing new. This reads that output, removes the escape
+# sequences and the keyboard hints (nobody can press a key here), and prints a
+# block only when its content differs from the one printed before it.
+# Timestamped event lines ("[12:00:00] Session started ...") pass through as
+# they come. A block is complete at the next redraw, or once the output has
+# been quiet for a second.
+filter_remote_control_output() {
+    local line='' pending='' block='' printed='' key status
+    local -r redraw=$'\e\\[[0-9]*A\e\\[J'
+    local -r link=$'^(.*)\e\\]8;;([^\e\a]+)(\e\\\\|\a)([^\e]*)\e\\]8;;(\e\\\\|\a)(.*)$'
+    local -r csi=$'\e\\[[0-9;?]*[A-Za-z]'
+
+    flush_block() {
+        [[ -n "${block}" ]] || return 0
+        # The first line carries a spinner and, while reconnecting, running
+        # timers; neither is a change worth a new block.
+        local first="${block%%$'\n'*}"
+        first="${first#*[[:space:]]}"
+        key="${first//[0-9]/}"$'\n'"${block#*$'\n'}"
+        if [[ "${key}" != "${printed}" ]]; then
+            printf '%s' "${block}"
+            printed="${key}"
+        fi
+        block=''
+    }
+
+    while :; do
+        if IFS= read -r -t 1 line; then
+            status=0
+        else
+            status=$?
+        fi
+
+        if (( status > 128 )); then
+            # Timed out; keep a partial line for the next read.
+            pending+="${line}"
+            flush_block
+            continue
+        fi
+        line="${pending}${line}"
+        pending=''
+        if (( status != 0 )) && [[ -z "${line}" ]]; then
+            flush_block
+            return 0
+        fi
+
+        if [[ "${line}" =~ ${redraw} ]]; then
+            flush_block
+            while [[ "${line}" =~ ${redraw} ]]; do
+                line="${line/"${BASH_REMATCH[0]}"/}"
+            done
+        fi
+        # Hyperlinks become "text URL", so the session link stays in the log.
+        while [[ "${line}" =~ ${link} ]]; do
+            line="${BASH_REMATCH[1]}${BASH_REMATCH[4]} ${BASH_REMATCH[2]}${BASH_REMATCH[6]}"
+        done
+        while [[ "${line}" =~ ${csi} ]]; do
+            line="${line/"${BASH_REMATCH[0]}"/}"
+        done
+        line="${line//$'\r'/}"
+        line="${line%"${line##*[![:space:]]}"}"
+
+        if [[ -z "${line}" || "${line}" =~ ^space\ to\ (show|hide)\ QR\ code ]]; then
+            :
+        elif [[ "${line}" =~ ^\[[0-9]{2}:[0-9]{2}:[0-9]{2}\] ]]; then
+            flush_block
+            printf '%s\n' "${line}"
+        else
+            block+="${line}"$'\n'
+        fi
+
+        if (( status != 0 )); then
+            flush_block
+            return 0
+        fi
+    done
+}

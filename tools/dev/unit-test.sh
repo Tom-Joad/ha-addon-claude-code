@@ -175,6 +175,38 @@ check 'backup: credentials kept' 'no' "$(excluded claude/.credentials.json)"
 check 'backup: memory kept' 'no' "$(excluded claude/memory/versions/x.md)"
 check 'backup: home kept' 'no' "$(excluded home/.bash_history)"
 
+
+# filter_remote_control_output: one block per change, not per redraw.
+rc_output() {
+    local up=$'\e[7A\e[J' dim=$'\e[2m' off=$'\e[22m'
+    local link=$'\e]8;;https://claude.ai/code/session_x\e\\Attached\e]8;;\e\\'
+    printf '%s\n' "·|· Connecting · config"
+    printf '%s\n' $'\e[1A\e[J'"·✔︎· Connected · config" \
+        "    ${dim}Capacity: 0/32 · New sessions${off}" '' 'Continue at https://claude.ai/code?environment=env_x' \
+        "${dim}space to show QR code${off}"
+    printf '%s\n' "${up}·✔︎· Connected · config" \
+        "    ${dim}Capacity: 0/32 · New sessions${off}" '' 'Continue at https://claude.ai/code?environment=env_x' \
+        "${dim}space to show QR code${off}"
+    printf '%s\n' "${up}[12:00:00] Session started"
+    printf '%s\n' "${up}·✔︎· Connected · config" \
+        "    ${dim}Capacity: 1/32 · New sessions${off}" "    ${link}" '' \
+        'Continue at https://claude.ai/code?environment=env_x' "${dim}space to show QR code${off}"
+    printf '%s\n' "${up}·✔︎· Reconnecting · retrying in 3s"
+    printf '%s\n' "${up}·/· Reconnecting · retrying in 2s"
+}
+expected_rc=$'·|· Connecting · config
+·✔︎· Connected · config
+    Capacity: 0/32 · New sessions
+Continue at https://claude.ai/code?environment=env_x
+[12:00:00] Session started
+·✔︎· Connected · config
+    Capacity: 1/32 · New sessions
+    Attached https://claude.ai/code/session_x
+Continue at https://claude.ai/code?environment=env_x
+·✔︎· Reconnecting · retrying in 3s'
+check 'remote control output: redraws collapse to changes' "${expected_rc}" \
+    "$(rc_output | filter_remote_control_output)"
+
 # Every service of the add-on starts after init-log-level, which lowers trace
 # to debug before anything reads the options (s6 dependencies, transitively).
 S6=claude-code/rootfs/etc/s6-overlay/s6-rc.d

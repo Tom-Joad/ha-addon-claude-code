@@ -257,7 +257,7 @@ mkdir -p "${WORK}/fs/claude"
 printf '{}' > "${WORK}/fs/claude/.credentials.json"
 FAKE_OPTIONS='{"log_level": "info", "claude_version": "3.0.0", "remote_control": "server",
                "remote_control_name": " "}' start_fake fs 3.0.0 3.0.0
-wait_for fs 'claude remote-control --spawn same-dir --name Home Assistant$' \
+wait_for fs 'claude remote-control --spawn same-dir --name Home Assistant --remote-control-session-name-prefix Home Assistant$' \
     || { log_of fs >&2; fail 'server: Remote Control did not start under the default name'; }
 docker exec "${NET}-fs" jq -e 'has("remoteControlAtStartup") or has("disableRemoteControl") | not' \
     /data/claude/settings.json > /dev/null || fail 'server: settings.json keeps a session-mode key'
