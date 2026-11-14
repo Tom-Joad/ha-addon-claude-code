@@ -12,6 +12,9 @@ with a new major version, and its entry says what to do.
   Control's status block every second. The add-on now logs the block only when
   it changes (connected, a session attached or renamed, reconnecting), and
   event lines as they come.
+- Sessions opened from claude.ai in `server` mode are named after
+  `remote_control_name` (for example `Home Assistant-lucky-knuth`) instead of
+  the container's host name (`b46aad3a-claude-code-lucky-knuth`).
 
 ## 1.1.0 - 2026-11-12
 

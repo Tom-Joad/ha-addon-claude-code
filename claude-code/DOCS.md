@@ -149,7 +149,9 @@ connection comes back by itself.
 ### Option: `remote_control_name`
 
 The name the `server` session shows up under in the session list on
-claude.ai/code and in the Claude app. Default `Home Assistant`; an empty or
+claude.ai/code and in the Claude app. Sessions you open later in the same
+environment carry it as a prefix, followed by a generated name such as
+`Home Assistant-lucky-knuth`. Default `Home Assistant`; an empty or
 blank name falls back to it. `disabled` and `session` don't use it.
 
 The name only applies to sessions. The environment you pick on claude.ai/code

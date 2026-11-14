@@ -29,6 +29,10 @@ session_name=$(bashio::config 'remote_control_name' "${DEFAULT_NAME}")
 
 options+=(--spawn same-dir)
 options+=(--name "${session_name}")
+# --name only covers the session created at start. Sessions opened later from
+# claude.ai get a generated name whose prefix defaults to the host name, which
+# in an add-on is "<repository hash>-claude-code".
+options+=(--remote-control-session-name-prefix "${session_name}")
 bashio::debug && options+=(--verbose)
 
 # same-dir rather than worktree: the configuration directory is not a git
