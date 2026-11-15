@@ -7,6 +7,10 @@ with a new major version, and its entry says what to do.
 
 ## [Unreleased]
 
+### Added
+- The GitHub CLI `gh` is part of the image, next to `git`. A login with
+  `gh auth login` is kept in `/data/home` across restarts and updates.
+
 ### Fixed
 - In `server` mode the log no longer fills with a new copy of Remote
   Control's status block every second. The add-on now logs the block only when
