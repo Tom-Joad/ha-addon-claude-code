@@ -60,6 +60,7 @@ RUN \
         coreutils \
         curl \
         git \
+        github-cli \
         jq \
         less \
         ncurses \

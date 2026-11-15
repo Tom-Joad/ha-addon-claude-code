@@ -136,6 +136,10 @@ in_log "Skipping package entry 'with space'" || fail 'package with a space not r
 in_log 'Installing package jq' || fail 'the valid package was not installed'
 echo "ok: package entries are checked"
 
+docker exec "${NET}-addon" sh -c 'git --version && gh --version' > /dev/null \
+    || fail 'git or gh is missing from the image'
+echo "ok: git and gh are in the image"
+
 # Read by jq inside the container: jq is part of the image.
 docker exec "${NET}-addon" jq -e '.cleanupPeriodDays == 14 and .remoteControlAtStartup == true' \
     /data/claude/settings.json > /dev/null \

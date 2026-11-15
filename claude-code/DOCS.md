@@ -172,6 +172,13 @@ ends only that command. The log names a command by its position (`init command
 a credential inside it stays out of the log. What a command prints is still
 logged.
 
+## Tools in the image
+
+Besides Claude Code the image carries `git`, the GitHub CLI `gh`, `jq`,
+`python3` (with PyYAML), `sqlite3`, `curl`, and `ha`. Sign in to GitHub once in
+the terminal with `gh auth login`; the login is kept in `/data/home` and
+survives restarts and updates. For more, see the `packages` option.
+
 ## Where state is kept
 
 Everything Claude Code owns lives on the add-on's persistent volume:
@@ -181,14 +188,14 @@ Everything Claude Code owns lives on the add-on's persistent volume:
 | `/data/claude` | `CLAUDE_CONFIG_DIR` — credentials, global config, settings |
 | `/data/claude/memory` | Curated memory, kept apart from the transcripts |
 | `/data/claude/projects` | Session transcripts |
-| `/data/home` | `HOME`, including the installed binary under `.local` |
+| `/data/home` | `HOME`, including the installed binary under `.local`, `.gitconfig`, and the GitHub CLI login under `.config/gh` |
 
 Curated memory is separated from transcripts on purpose: one is maintained, the
 other is a recording you can throw away. The `autoMemoryDirectory` setting is
 what puts it there.
 
 Note that add-on backups include `/data`, and therefore include your credentials
-and your transcripts. If that is not what you want, exclude them.
+(Claude Code's and, once you sign in, the GitHub CLI's) and your transcripts. If that is not what you want, exclude them.
 
 The Claude Code build itself (about 330 MB, under
 `/data/home/.local/share/claude/versions`) is left out of backups. After a
