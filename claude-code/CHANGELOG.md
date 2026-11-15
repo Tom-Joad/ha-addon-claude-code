@@ -5,7 +5,7 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
-## [Unreleased]
+## 1.2.0 - 2026-11-15
 
 ### Added
 - The GitHub CLI `gh` is part of the image, next to `git`. A login with
