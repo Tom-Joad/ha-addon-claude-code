@@ -5,6 +5,13 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
+## 1.2.1 - 2026-11-19
+
+### Security
+- Security updates of the distribution packages, picked up by rebuilding the image:
+  - `libssl3` 3.5.9-r1 (CVE-2026-107496, CVE-2026-88822, CVE-2026-88823, CVE-2026-95691, CVE-2026-95692)
+  - `nginx` 1.30.7-r0 (CVE-2026-113425, CVE-2026-118899, CVE-2026-121810, CVE-2026-123007, CVE-2026-123633, CVE-2026-123634)
+
 ## 1.2.0 - 2026-11-15
 
 ### Added
