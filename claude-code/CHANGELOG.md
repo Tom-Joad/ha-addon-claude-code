@@ -5,6 +5,12 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
+## 1.2.2 - 2026-11-24
+
+### Security
+- Security updates of the distribution packages, picked up by rebuilding the image:
+  - `python3` 3.14.10-r2
+
 ## 1.2.1 - 2026-11-19
 
 ### Security
