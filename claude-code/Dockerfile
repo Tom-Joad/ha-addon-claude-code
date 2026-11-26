@@ -1,7 +1,7 @@
 # The base image is named here and nowhere else (no build.yaml, no
 # BUILD_FROM argument): Dependabot only updates a FROM line it can read, and
 # with the tag behind an argument the image stayed on 21.0.1 for weeks.
-FROM ghcr.io/hassio-addons/base:21.0.11
+FROM ghcr.io/hassio-addons/base:21.0.12
 
 # Set shell
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -84,9 +84,9 @@ RUN \
 # the build instead of going into the image. Dependabot can't update these:
 # bump the version and both sums together (GitHub lists each asset's sha256 on
 # the release, e.g. `gh api repos/home-assistant/cli/releases/tags/<version>`).
-ARG HA_CLI_VERSION="5.6.0"
-ARG HA_CLI_SHA256_AMD64="9d259c700bfcd45b6a793709e1fcfd304a595624dda10cfa5edde66f0b8a9656"
-ARG HA_CLI_SHA256_AARCH64="4ecdbd67002defbf96e4668e62f631e9767b92d18e1ce54bfee6ddd040c20e73"
+ARG HA_CLI_VERSION="6.0.0"
+ARG HA_CLI_SHA256_AMD64="faab39046723cb68d43e9d5c8ac5a2cf105f3ecb3f5c8a01c0999c2699c56489"
+ARG HA_CLI_SHA256_AARCH64="514cd052627358d673842e6132d4d0fc88f246c1af767a895c2b529a153c0c59"
 RUN \
     case "$(uname -m)" in \
         aarch64) asset="ha_aarch64"; sha256="${HA_CLI_SHA256_AARCH64}" ;; \
