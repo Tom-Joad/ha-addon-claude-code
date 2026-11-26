@@ -5,7 +5,7 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
-## [Unreleased]
+## 1.2.4 - 2026-11-26
 
 ### Security
 - `ha` CLI 6.0.0 (was 5.6.0): built with current Go and `golang.org/x/net`/`x/text`,
