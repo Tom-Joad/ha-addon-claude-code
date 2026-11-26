@@ -5,6 +5,12 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
+## 1.2.3 - 2026-11-26
+
+### Security
+- Security updates of the distribution packages, picked up by rebuilding the image:
+  - `nginx` 1.30.8-r0 (CVE-2026-132779)
+
 ## 1.2.2 - 2026-11-24
 
 ### Security
