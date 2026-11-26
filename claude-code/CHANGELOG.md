@@ -5,6 +5,14 @@ All notable changes to the add-on are listed here. Versions follow
 action when updating (a removed or renamed option, moved state) only comes
 with a new major version, and its entry says what to do.
 
+## [Unreleased]
+
+### Security
+- `ha` CLI 6.0.0 (was 5.6.0): built with current Go and `golang.org/x/net`/`x/text`,
+  which fixes CVE-2026-111943, CVE-2026-78667, CVE-2026-78669, CVE-2026-97031,
+  CVE-2026-46600, CVE-2026-56851 and CVE-2026-56852 in the bundled binary.
+- Base image `hassio-addons/base` 21.0.12.
+
 ## 1.2.3 - 2026-11-26
 
 ### Security
